@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"go-file/common"
 	"go-file/model"
 	"mime/multipart"
@@ -13,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 type FileDeleteRequest struct {
@@ -67,18 +68,21 @@ func UploadFile(c *gin.Context) {
 		files = append(files, file)
 	}
 	t := time.Now()
+
+	// 排除subfolder的存在
+	/* 1
 	subfolder := t.Format("2006-01")
 	err = common.MakeDirIfNotExist(filepath.Join(uploadPath, subfolder))
 	if err != nil {
 		common.SysError("failed to create folder: " + err.Error())
 		c.Status(http.StatusInternalServerError)
 		return
-	}
+	}*/
 	for _, file := range files {
 		// In case someone wants to upload to other folders.
 		filename := filepath.Base(file.Filename)
-		link := fmt.Sprintf("%s/%s", subfolder, filename)
-		savePath := filepath.Join(uploadPath, subfolder, filename)
+		link := fmt.Sprintf("%s/%s", filename)
+		savePath := filepath.Join(uploadPath, filename)
 		if _, err := os.Stat(savePath); err == nil {
 			// File already existed.
 			timestamp := t.Format("_2006-01-02_15-04-05")
@@ -86,7 +90,7 @@ func UploadFile(c *gin.Context) {
 			if ext == "" {
 				link += timestamp
 			} else {
-				link = subfolder + "/" + filename[:len(filename)-len(ext)] + timestamp + ext
+				link = filename[:len(filename)-len(ext)] + timestamp + ext
 			}
 			savePath = filepath.Join(uploadPath, link)
 		}

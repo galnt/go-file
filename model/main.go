@@ -1,11 +1,12 @@
 package model
 
 import (
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"go-file/common"
 	"os"
+
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/mysql"
+	_ "modernc.org/sqlite"
 )
 
 var DB *gorm.DB
@@ -32,7 +33,7 @@ func InitDB() (db *gorm.DB, err error) {
 		db, err = gorm.Open("mysql", os.Getenv("SQL_DSN"))
 	} else {
 		// Use SQLite
-		db, err = gorm.Open("sqlite3", common.SQLitePath)
+		db, err = gorm.Open("sqlite", common.SQLitePath)
 	}
 	if err == nil {
 		DB = db

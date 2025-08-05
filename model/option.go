@@ -25,7 +25,7 @@ func InitOptionMap() {
 	common.OptionMap["FileDownloadPermission"] = strconv.Itoa(common.FileDownloadPermission)
 	common.OptionMap["ImageUploadPermission"] = strconv.Itoa(common.ImageUploadPermission)
 	common.OptionMap["ImageDownloadPermission"] = strconv.Itoa(common.ImageDownloadPermission)
-	common.OptionMap["WebsiteName"] = "Go File"
+	common.OptionMap["WebsiteName"] = "文件传输"
 	common.OptionMap["FooterInfo"] = ""
 	common.OptionMap["Version"] = common.Version
 	common.OptionMap["Notice"] = ""

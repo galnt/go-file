@@ -1,17 +1,18 @@
 package router
 
 import (
-	"github.com/gin-gonic/gin"
 	"go-file/common"
 	"go-file/controller"
 	"go-file/middleware"
+
+	"github.com/gin-gonic/gin"
 )
 
 func setWebRouter(router *gin.Engine) {
 	router.Use(middleware.GlobalWebRateLimit())
 	// Always available
 	// All page must have username in context
-	router.GET("/", middleware.ExtractUserInfo(), controller.GetIndexPage)
+	router.GET("/", middleware.ExtractUserInfo(), controller.GetExplorerPageOrFile)
 	router.GET("/public/static/:file", controller.GetStaticFile)
 	router.GET("/public/lib/:file", controller.GetLibFile)
 	router.GET("/public/icon/:file", controller.GetIconFile)

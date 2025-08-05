@@ -4,12 +4,13 @@ import (
 	"embed"
 	"flag"
 	"fmt"
-	"github.com/google/uuid"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 var StartTime = time.Now()
@@ -131,6 +132,11 @@ func init() {
 	if _, err := os.Stat(UploadPath); os.IsNotExist(err) {
 		_ = os.Mkdir(UploadPath, 0777)
 	}
+
+	// 新建目录
+	_ = os.Mkdir(path.Join(UploadPath, "荔林社区"), 0777)
+	_ = os.Mkdir(path.Join(UploadPath, "招商社区"), 0777)
+
 	if _, err := os.Stat(ImageUploadPath); os.IsNotExist(err) {
 		_ = os.Mkdir(ImageUploadPath, 0777)
 	}
