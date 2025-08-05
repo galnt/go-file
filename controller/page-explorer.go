@@ -70,6 +70,21 @@ func getDataFromFS(path string, fullPath string) (localFilesPtr *[]model.LocalFi
 	if err != nil {
 		return
 	}
+
+	// 查询数据库,把当前目录下的文件查询出来
+	// query := path
+	filesV, err := model.QueryPathFiles(path)
+	if err != nil {
+
+	}
+
+	// 创建 map[string]string
+	fileMap := make(map[string]string)
+
+	for _, file := range filesV {
+		fileMap[file.Filename] = file.Description
+	}
+
 	if path != "/" {
 		parts := strings.Split(path, "/")
 		// Add the special item: ".." which means parent dir
@@ -94,20 +109,6 @@ func getDataFromFS(path string, fullPath string) (localFilesPtr *[]model.LocalFi
 	thumbsDir := filepath.Join(fullPath, "thumbs")
 	if path != "" {
 		os.MkdirAll(thumbsDir, os.ModePerm)
-	}
-
-	// 查询数据库,把当前目录下的文件查询出来
-	// query := path
-	filesV, err := model.AllFiles()
-	if err != nil {
-
-	}
-
-	// 创建 map[string]string
-	fileMap := make(map[string]string)
-
-	for _, file := range filesV {
-		fileMap[file.Filename] = file.Description
 	}
 
 	for _, f := range files {

@@ -38,6 +38,13 @@ func AllFiles() ([]*File, error) {
 	return files, err
 }
 
+func QueryPathFiles(query string) ([]*File, error) {
+	var files []*File
+	var err error
+	err = DB.Where("path = ?", query).Find(&files).Error
+	return files, err
+}
+
 func QueryFiles(query string, startIdx int) ([]*File, error) {
 	var files []*File
 	var err error
