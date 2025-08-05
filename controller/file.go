@@ -32,7 +32,9 @@ func UploadFile(c *gin.Context) {
 			// In this case the given path is not valid, so we reset it to ExplorerRootPath.
 			uploadPath = common.ExplorerRootPath
 		}
-		saveToDatabase = false
+
+		// 上传的文件都记录到数据库中
+		// saveToDatabase = false
 
 		// Start a go routine to delete explorer' cache
 		if common.ExplorerCacheEnabled {
@@ -130,6 +132,7 @@ func UploadFile(c *gin.Context) {
 				Time:        currentTime,
 				Link:        link,
 				Filename:    filename,
+				Path:        path,
 			}
 			err = fileObj.Insert()
 			if err != nil {

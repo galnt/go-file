@@ -31,8 +31,13 @@
                             <td></td>
                             <td></td>
                             {{ else }}
-                            <td><a class="file-link" href="{{$file.Link}}" target="_blank" download="{{$file.Name}}">📄
-                                {{$file.Name}}</a></td>
+                            <td>
+                                {{if $file.Thumb}}
+                                    <img src="{{$file.Thumb}}" width="80">
+                                {{else}}
+                                {{end}}
+                                <a class="file-link" href="{{$file.Link}}" target="_blank" download="{{$file.Name}}">📄
+                                {{$file.Name}}</a>  <span style="color: #b3bd5e;">{{$file.Description}}</span></td>
                             <td style="">
                                 <a class="file-link" href="{{$file.Link}}" download="{{$file.Name}}">
                                     <svg t="1656772118144" class="icon" viewBox="0 0 1024 1024" version="1.1"

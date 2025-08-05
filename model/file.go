@@ -1,12 +1,13 @@
 package model
 
 import (
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"go-file/common"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
 type File struct {
@@ -17,14 +18,17 @@ type File struct {
 	Link            string `json:"link" gorm:"unique"`
 	Time            string `json:"time"`
 	DownloadCounter int    `json:"download_counter"`
+	Path            string `json:"path"`
 }
 
 type LocalFile struct {
 	Name         string
 	Link         string
 	Size         string
+	Description  string
 	IsFolder     bool
 	ModifiedTime string
+	Thumb        string
 }
 
 func AllFiles() ([]*File, error) {
