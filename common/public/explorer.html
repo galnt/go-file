@@ -228,7 +228,33 @@
             pswpModule: () => import('https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.4.2/photoswipe.esm.min.js')
         });
         
-        lightbox.init();
+        // ------------------ 新增：动态获取并设置真实尺寸 ------------------
+document.querySelectorAll('#my-gallery a').forEach(link => {
+    const imgSrc = link.href;  // 原图地址（或用 data-pswp-src 如果你有）
+
+    // 创建一个 Image 对象来读取真实尺寸（浏览器会缓存，不会重复下载）
+    const img = new Image();
+    img.src = imgSrc;
+
+    img.onload = () => {
+        // 设置 data 属性（PhotoSwipe 会优先读取这些）
+        link.dataset.pswpWidth  = img.naturalWidth;
+        link.dataset.pswpHeight = img.naturalHeight;
+
+        // 如果你想更保险，也可以直接改内部 item 数据（可选）
+        // 但大多数情况下改 data- 属性就够了
+    };
+
+    // 可选：如果图片加载失败，给个默认比例防止卡死
+    img.onerror = () => {
+        link.dataset.pswpWidth  = '1200';
+        link.dataset.pswpHeight = '800';
+    };
+});
+
+// 所有图片尺寸预加载完成后（或不管成败都）再初始化
+// 但实际使用中可以直接 init()，因为 PhotoSwipe 会在需要时读取 data- 属性
+lightbox.init();
     </script>
 </body>
 </html>
