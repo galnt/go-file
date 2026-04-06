@@ -13,14 +13,14 @@
             --card-bg: #ffffff;
             --text-main: #333;
         }
-    
+
         body {
             margin: 0;
             padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-color);
         }
-    
+
         /* 顶部横幅 */
         .header {
             background: #fff;
@@ -28,128 +28,70 @@
             border-bottom: 1px solid #ddd;
             margin-bottom: 10px;
         }
-    
+
         .header h1 {
             font-size: 1.2rem;
             margin: 0 0 10px 0;
             color: var(--text-main);
         }
-    
+
         .header-info {
             font-size: 12px;
             color: #888;
             line-height: 1.6;
         }
-    
+
         /* 瀑布流容器 */
         .photo-gallery {
-            padding: 12px;
-            column-count: 2;
+            padding: 10px;
+            /* 关键：CSS 瀑布流分栏 */
+            column-count: 2; /* 默认手机端2列 */
             column-gap: 10px;
         }
-    
+
+        /* 响应式：电脑端显示 4 列 */
+        @media (min-width: 768px) {
+            .photo-gallery {
+                column-count: 4;
+                padding: 20px 100px;
+            }
+        }
+
+        /* 图片卡片样式 */
         .photo-item {
-            break-inside: avoid;
+            break-inside: avoid; /* 防止图片被分割到两列 */
             margin-bottom: 10px;
             background: var(--card-bg);
-            border-radius: 6px;
+            border-radius: 4px;
             overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             display: block;
             cursor: pointer;
-            transition: transform 0.18s ease;
+            transition: transform 0.2s;
         }
-    
+
         .photo-item:hover {
-            transform: scale(1.015);
+            transform: scale(1.02);
         }
-    
+
         .photo-item img {
             width: 100%;
             height: auto;
             display: block;
-            background: #f0f0f0; /* 加载占位 */
         }
-    
-        /* 小屏幕手机 */
-        @media (max-width: 600px) {
-            .photo-gallery {
-                padding: 8px;
-                column-gap: 8px;
-            }
-            .photo-item {
-                margin-bottom: 8px;
-            }
-        }
-    
-        /* 平板竖屏（portrait）主流尺寸 */
-        @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
-            .photo-gallery {
-                column-count: 3;
-                column-gap: 14px;
-                padding: 16px 20px;           /* 竖屏留适中两侧空白 */
-            }
-            .photo-item {
-                margin-bottom: 14px;
-                border-radius: 8px;
-            }
-        }
-    
-        /* 横屏模式 - 重点优化：减少两侧空白 + 图片更大 */
-        @media (orientation: landscape) {
-            .photo-gallery {
-                column-count: 4;
-                column-gap: 16px;
-                padding: 20px 3vw;            /* 用vw动态缩小两侧空白 */
-                max-width: 98vw;
-                margin: 0 auto;
-            }
-    
-            .photo-item {
-                margin-bottom: 16px;
-                border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            }
-    
-            /* 强制图片填满列宽（视觉放大感更强） */
-            .photo-item img {
-                width: 100% !important;
-                min-width: 100%;
-            }
-        }
-    
-        /* 横屏 + 更大设备（桌面/大平板横放） */
-        @media (orientation: landscape) and (min-width: 1200px) {
-            .photo-gallery {
-                column-count: 4;               /* 可改为5，如果你图片很多 */
-                padding: 30px 4vw;
-                column-gap: 20px;
-            }
-        }
-    
-        /* 超大桌面屏 */
-        @media (min-width: 1440px) and (orientation: landscape) {
-            .photo-gallery {
-                column-count: 5;
-                padding: 40px 3vw;
-                column-gap: 22px;
-            }
-        }
-    
-        /* 底部工具栏 */
+
+        /* 底部操作栏 (模拟) */
         .footer-tools {
             position: fixed;
-            bottom: 24px;
+            bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0,0,0,0.75);
+            background: rgba(0,0,0,0.7);
             color: white;
-            padding: 10px 24px;
-            border-radius: 50px;
+            padding: 10px 20px;
+            border-radius: 30px;
             font-size: 14px;
             z-index: 100;
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
         }
     </style>
 </head>
@@ -228,33 +170,7 @@
             pswpModule: () => import('https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.4.2/photoswipe.esm.min.js')
         });
         
-        // ------------------ 新增：动态获取并设置真实尺寸 ------------------
-document.querySelectorAll('#my-gallery a').forEach(link => {
-    const imgSrc = link.href;  // 原图地址（或用 data-pswp-src 如果你有）
-
-    // 创建一个 Image 对象来读取真实尺寸（浏览器会缓存，不会重复下载）
-    const img = new Image();
-    img.src = imgSrc;
-
-    img.onload = () => {
-        // 设置 data 属性（PhotoSwipe 会优先读取这些）
-        link.dataset.pswpWidth  = img.naturalWidth;
-        link.dataset.pswpHeight = img.naturalHeight;
-
-        // 如果你想更保险，也可以直接改内部 item 数据（可选）
-        // 但大多数情况下改 data- 属性就够了
-    };
-
-    // 可选：如果图片加载失败，给个默认比例防止卡死
-    img.onerror = () => {
-        link.dataset.pswpWidth  = '1200';
-        link.dataset.pswpHeight = '800';
-    };
-});
-
-// 所有图片尺寸预加载完成后（或不管成败都）再初始化
-// 但实际使用中可以直接 init()，因为 PhotoSwipe 会在需要时读取 data- 属性
-lightbox.init();
+        lightbox.init();
     </script>
 </body>
 </html>

@@ -134,8 +134,8 @@ func init() {
 	}
 
 	// 新建目录
-	_ = os.Mkdir(path.Join(UploadPath, "荔林社区"), 0777)
-	_ = os.Mkdir(path.Join(UploadPath, "招商社区"), 0777)
+	// _ = os.Mkdir(path.Join(UploadPath, "荔林社区"), 0777)
+	// _ = os.Mkdir(path.Join(UploadPath, "招商社区"), 0777)
 
 	/* 不再建立image目录
 	if _, err := os.Stat(ImageUploadPath); os.IsNotExist(err) {
