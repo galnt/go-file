@@ -21,6 +21,19 @@ func GetExplorerPageOrFile(c *gin.Context) {
 	path := c.DefaultQuery("path", "/")
 	path, _ = url.PathUnescape(path)
 
+	// 检查是否是根路径访问（没有有效的path参数）
+	if path == "/" || path == "" {
+		// 显示静态通知页面，告知用户需要通过分享链接访问
+		c.HTML(http.StatusOK, "explorer.html", gin.H{
+			"message":        "请通过分享链接访问本页面",
+			"option":         common.OptionMap,
+			"username":       c.GetString("username"),
+			"files":          &[]model.LocalFile{},
+			"readmeFileLink": "",
+		})
+		return
+	}
+
 	fullPath := filepath.Join(common.ExplorerRootPath, path)
 	if !strings.HasPrefix(fullPath, common.ExplorerRootPath) {
 		// We may being attacked!

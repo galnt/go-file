@@ -356,6 +356,19 @@
         </div>
     </header>
 
+    {{if .message}}
+    <div class="notice-container" style="text-align: center; padding: 40px 20px; color: #666;">
+        <div style="font-size: 24px; margin-bottom: 20px;">⚠️</div>
+        <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">请通过分享链接访问</div>
+        <div style="font-size: 14px; line-height: 1.6; max-width: 500px; margin: 0 auto;">
+            本页面为照片分享页面，需要通过有效的分享链接才能查看照片。<br>
+            如果您是通过分享链接访问的，请确保链接完整正确。
+        </div>
+        <div style="margin-top: 30px; font-size: 13px; color: #999;">
+            当前访问路径: <span id="current-path">/</span>
+        </div>
+    </div>
+    {{else}}
     <div class="photo-gallery" id="my-gallery">
 
         {{range $index, $file := .files}}
@@ -368,6 +381,7 @@
             <img src="{{$file.Thumb}}" alt="照片{{add $index 1}}" />
         </a>
          {{end}}
+    {{end}}
 
         
                         <!--
@@ -496,6 +510,25 @@
                 downloadBtn.style.display = 'flex';
             }
             
+            // 显示当前访问路径
+            const urlParams = new URLSearchParams(window.location.search);
+            const path = urlParams.get('path') || '/';
+            const pathElement = document.getElementById('current-path');
+            if (pathElement) {
+                pathElement.textContent = path;
+            }
+            
+            // 初始化PhotoSwipe并保存引用到全局变量
+            import('https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.4.2/photoswipe-lightbox.esm.min.js')
+                .then(PhotoSwipeLightbox => {
+                    window.lightbox = new PhotoSwipeLightbox.default({
+                        gallery: '#my-gallery',
+                        children: 'a',
+                        pswpModule: () => import('https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.4.2/photoswipe.esm.min.js')
+                    });
+                    window.lightbox.init();
+                });
+            
             // 检查用户登录状态
             checkLoginStatus();
             
@@ -520,6 +553,8 @@
             });
         });
 
+        let originalLightbox = null;
+        
         // 切换下载模式
         function toggleDownloadMode() {
             isDownloadMode = !isDownloadMode;
@@ -540,6 +575,9 @@
                 photoItems.forEach(item => {
                     item.classList.add('selectable');
                 });
+                
+                // 禁用PhotoSwipe预览功能
+                disablePhotoPreview();
             } else {
                 // 退出下载模式
                 downloadBtn.style.background = 'linear-gradient(135deg, #07c160, #05a34a)';
@@ -555,9 +593,55 @@
                 photoItems.forEach(item => {
                     item.classList.remove('selectable', 'selected');
                 });
+                
+                // 重新启用PhotoSwipe预览功能
+                enablePhotoPreview();
             }
             
             updateSelectionCount();
+        }
+        
+        // 禁用照片预览功能
+        function disablePhotoPreview() {
+            // 保存原始的lightbox引用
+            if (window.lightbox) {
+                originalLightbox = window.lightbox;
+                // 销毁lightbox实例
+                window.lightbox.destroy();
+                window.lightbox = null;
+            }
+            
+            // 移除所有照片项的href属性，防止点击跳转
+            photoItems.forEach(item => {
+                item.setAttribute('data-original-href', item.getAttribute('href'));
+                item.removeAttribute('href');
+                item.style.cursor = 'pointer';
+            });
+        }
+        
+        // 启用照片预览功能
+        function enablePhotoPreview() {
+            // 恢复href属性
+            photoItems.forEach(item => {
+                const originalHref = item.getAttribute('data-original-href');
+                if (originalHref) {
+                    item.setAttribute('href', originalHref);
+                    item.removeAttribute('data-original-href');
+                }
+            });
+            
+            // 重新初始化PhotoSwipe
+            if (originalLightbox) {
+                import('https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.4.2/photoswipe-lightbox.esm.min.js')
+                    .then(PhotoSwipeLightbox => {
+                        window.lightbox = new PhotoSwipeLightbox.default({
+                            gallery: '#my-gallery',
+                            children: 'a',
+                            pswpModule: () => import('https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.4.2/photoswipe.esm.min.js')
+                        });
+                        window.lightbox.init();
+                    });
+            }
         }
 
         // 切换照片选择状态
