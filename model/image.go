@@ -1,10 +1,11 @@
 package model
 
 import (
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"go-file/common"
 	"os"
 	"path/filepath"
+
+	_ "github.com/glebarez/sqlite"
 )
 
 type Image struct {

@@ -1,8 +1,9 @@
 package model
 
 import (
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"strings"
+
+	_ "github.com/glebarez/sqlite"
 )
 
 type User struct {

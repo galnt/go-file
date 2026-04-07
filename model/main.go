@@ -4,9 +4,9 @@ import (
 	"go-file/common"
 	"os"
 
+	_ "github.com/glebarez/sqlite"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
-	_ "modernc.org/sqlite"
 )
 
 var DB *gorm.DB

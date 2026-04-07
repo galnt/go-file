@@ -1,0 +1,66 @@
+[
+  {
+    "title": "热搜推荐",
+    "categorys": [
+      {
+        "name": "螃蟹",
+        "icon": "/imgs/categorys/螃蟹.png"
+      },
+      {
+        "name": "玉米",
+        "icon": "/imgs/categorys/玉米.png"
+      },
+      {
+        "name": "西瓜",
+        "icon": "/imgs/categorys/西瓜.png"
+      }
+    ]
+  },
+  {
+    "title": "蔬菜类",
+    "categorys": [
+      {
+        "name": "白菜",
+        "icon": "/imgs/categorys/吃蔬菜.png"
+      },
+      {
+        "name": "玉米",
+        "icon": "/imgs/categorys/玉米.png"
+      },
+      {
+        "name": "沙拉",
+        "icon": "/imgs/categorys/蔬菜沙拉.png"
+      }
+    ]
+  },
+  {
+    "title": "海鲜类",
+    "categorys": [
+      {
+        "name": "螃蟹",
+        "icon": "/imgs/categorys/螃蟹.png"
+      },
+      {
+        "name": "鱼",
+        "icon": "/imgs/categorys/鱼.png"
+      },
+      {
+        "name": "鱿鱼",
+        "icon": "/imgs/categorys/鱿鱼.png"
+      }
+    ]
+  },
+  {
+    "title": "水果类",
+    "categorys": [
+      {
+        "name": "苹果",
+        "icon": "/imgs/categorys/苹果.png"
+      },
+      {
+        "name": "西瓜",
+        "icon": "/imgs/categorys/西瓜.png"
+      }
+    ]
+  }
+]
