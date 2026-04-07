@@ -41,6 +41,9 @@ func InitDB() (db *gorm.DB, err error) {
 		db.AutoMigrate(&Image{})
 		db.AutoMigrate(&User{})
 		db.AutoMigrate(&Option{})
+
+		// 小程序相关表
+		db.AutoMigrate(&WeChatUser{}, &Activity{}, &ActivityPhoto{})
 		createAdminAccount()
 		return DB, err
 	} else {

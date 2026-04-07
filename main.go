@@ -72,6 +72,10 @@ func main() {
 	server.Use(sessions.Sessions("session", store))
 
 	router.SetRouter(server)
+
+	// 设置小程序路由
+	// SetupMiniApp(router)
+	// mini.SetupMiniApp(server)
 	var realPort = os.Getenv("PORT")
 	if realPort == "" {
 		realPort = strconv.Itoa(*common.Port)
