@@ -19,6 +19,9 @@ import (
 func loadTemplate() *template.Template {
 	var funcMap = template.FuncMap{
 		"unescape": common.UnescapeHTML,
+		"add": func(a, b int) int {
+			return a + b
+		},
 	}
 	t := template.Must(template.New("").Funcs(funcMap).ParseFS(common.FS, "public/*.html"))
 	return t

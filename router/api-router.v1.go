@@ -12,6 +12,11 @@ func setApiRouter(router *gin.Engine) {
 	router.POST("/api/file", middleware.FileUploadPermissionCheck(), controller.UploadFile)
 	router.POST("/api/image", middleware.ImageUploadPermissionCheck(), controller.UploadImage)
 	router.GET("/api/notice", controller.GetNotice)
+	
+	// 微信相关API（不需要认证）
+	router.POST("/api/wechat/login", controller.WechatLogin)
+	router.GET("/temp/:filename", controller.GetTempFile)
+	
 	basicAuth := router.Group("/api")
 	basicAuth.Use(middleware.ApiAuth())
 	{
@@ -19,6 +24,10 @@ func setApiRouter(router *gin.Engine) {
 		basicAuth.DELETE("/image", controller.DeleteImage)
 		basicAuth.PUT("/user", middleware.NoTokenAuth(), controller.UpdateSelf)
 		basicAuth.POST("/token", controller.GenerateNewUserToken)
+		
+		// 需要认证的API
+		basicAuth.GET("/user/info", controller.GetUserInfo)
+		basicAuth.POST("/download/batch", controller.BatchDownload)
 	}
 	adminAuth := router.Group("/api")
 	adminAuth.Use(middleware.ApiAdminAuth())

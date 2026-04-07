@@ -93,6 +93,257 @@
             font-size: 14px;
             z-index: 100;
         }
+
+        /* 右下角浮动按钮 */
+        .floating-buttons {
+            position: fixed;
+            bottom: 30px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 1001;
+        }
+
+        .floating-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #07c160, #05a34a);
+            border: none;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(7, 193, 96, 0.3);
+            transition: all 0.3s;
+            flex-direction: column;
+            padding: 0;
+        }
+
+        .floating-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(7, 193, 96, 0.4);
+        }
+
+        .floating-btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn-icon {
+            font-size: 20px;
+            margin-bottom: 2px;
+        }
+
+        .btn-text {
+            font-size: 12px;
+        }
+
+        /* 我的面板 */
+        .panel-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1002;
+            display: none;
+        }
+
+        .panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 300px;
+            background: white;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 1003;
+            transform: translateX(100%);
+            transition: transform 0.3s;
+        }
+
+        .panel.show {
+            transform: translateX(0);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .panel-header h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .panel-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .panel-content {
+            padding: 20px;
+        }
+
+        .wechat-login-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #07c160, #05a34a);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .wechat-icon {
+            font-size: 20px;
+        }
+
+        .login-tip {
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .user-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            overflow: hidden;
+            margin: 0 auto 15px;
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .user-details {
+            text-align: center;
+        }
+
+        .user-details h4 {
+            margin: 0 0 5px 0;
+            font-size: 18px;
+        }
+
+        .user-details p {
+            margin: 0 0 15px 0;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .logout-btn {
+            padding: 8px 20px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 4px;
+            color: #333;
+            cursor: pointer;
+        }
+
+        /* 下载控制栏 - 移动到顶部 */
+        .download-controls {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            z-index: 1000;
+            transform: translateY(-100%);
+            transition: transform 0.3s;
+        }
+
+        .download-controls.show {
+            transform: translateY(0);
+        }
+
+        .download-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .download-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .action-btn.primary {
+            background: #07c160;
+            color: white;
+            border-color: #07c160;
+        }
+
+        /* 照片选择状态 */
+        .photo-item.selected {
+            position: relative;
+            border: 3px solid #07c160;
+        }
+
+        .photo-item.selected::after {
+            content: "✓";
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 24px;
+            height: 24px;
+            background: #07c160;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .photo-item.selectable {
+            cursor: pointer;
+        }
+
+        .photo-item.selectable:hover {
+            opacity: 0.9;
+        }
+
+        /* 选择复选框 */
+        .selection-checkbox {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 20px;
+            height: 20px;
+            z-index: 1;
+        }
     </style>
 </head>
 <body>
@@ -112,8 +363,9 @@
         <a href="{{$file.Link}}" 
            data-pswp-width="800" 
            data-pswp-height="1200" 
-           target="_blank" class="photo-item">
-            <img src="{{$file.Thumb}}" alt="照片1" />
+           target="_blank" class="photo-item"
+           data-photo-id="{{$file.Link}}">
+            <img src="{{$file.Thumb}}" alt="照片{{add $index 1}}" />
         </a>
          {{end}}
 
@@ -160,6 +412,59 @@
         ▶ 自动播放
     </div>
 
+    <!-- 右下角浮动按钮 - 交换位置 -->
+    <div class="floating-buttons">
+        <button class="floating-btn" id="download-btn" onclick="toggleDownloadMode()">
+            <span class="btn-icon">⬇️</span>
+            <span class="btn-text">下载</span>
+        </button>
+        <button class="floating-btn" id="my-btn" onclick="showMyPanel()">
+            <span class="btn-icon">👤</span>
+            <span class="btn-text">我的</span>
+        </button>
+    </div>
+
+    <!-- 我的面板（微信登录） -->
+    <div class="panel-overlay" id="myPanelOverlay" onclick="hideMyPanel()"></div>
+    <div class="panel" id="myPanel">
+        <div class="panel-header">
+            <h3>我的</h3>
+            <button class="panel-close" onclick="hideMyPanel()">×</button>
+        </div>
+        <div class="panel-content">
+            <div id="user-info" style="display: none;">
+                <div class="user-avatar">
+                    <img id="user-avatar" src="" alt="用户头像">
+                </div>
+                <div class="user-details">
+                    <h4 id="user-nickname"></h4>
+                    <p id="user-id"></p>
+                    <button class="logout-btn" onclick="logout()">退出登录</button>
+                </div>
+            </div>
+            <div id="login-section">
+                <p>请使用微信登录</p>
+                <button class="wechat-login-btn" onclick="wechatLogin()">
+                    <span class="wechat-icon">💬</span>
+                    微信登录
+                </button>
+                <p class="login-tip">登录后可以保存您的下载记录</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 下载控制栏 - 移动到顶部 -->
+    <div class="download-controls" id="downloadControls">
+        <div class="download-header">
+            <span>已选择 <span id="selected-count">0</span> 张照片</span>
+            <div class="download-actions">
+                <button class="action-btn" onclick="selectAllPhotos()">全选</button>
+                <button class="action-btn" onclick="toggleDownloadMode()">取消下载</button>
+                <button class="action-btn primary" onclick="downloadSelected()">下载选中(<span id="download-count">0</span>)</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         import PhotoSwipeLightbox from 'https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.4.2/photoswipe-lightbox.esm.min.js';
         
@@ -171,6 +476,426 @@
         });
         
         lightbox.init();
+    </script>
+
+    <script>
+        // 全局状态
+        let isDownloadMode = false;
+        let selectedPhotos = new Set();
+        let userInfo = null;
+        let photoItems = [];
+
+        // 页面加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化照片项
+            photoItems = document.querySelectorAll('.photo-item');
+            
+            // 确保下载按钮初始显示
+            const downloadBtn = document.getElementById('download-btn');
+            if (downloadBtn) {
+                downloadBtn.style.display = 'flex';
+            }
+            
+            // 检查用户登录状态
+            checkLoginStatus();
+            
+            // 绑定照片点击事件
+            photoItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    if (isDownloadMode) {
+                        e.preventDefault();
+                        togglePhotoSelection(this);
+                    }
+                });
+            });
+            
+            // 添加触摸支持（移动端）
+            photoItems.forEach(item => {
+                item.addEventListener('touchstart', function(e) {
+                    if (isDownloadMode) {
+                        e.preventDefault();
+                        togglePhotoSelection(this);
+                    }
+                }, { passive: false });
+            });
+        });
+
+        // 切换下载模式
+        function toggleDownloadMode() {
+            isDownloadMode = !isDownloadMode;
+            const downloadBtn = document.getElementById('download-btn');
+            const myBtn = document.getElementById('my-btn');
+            const downloadControls = document.getElementById('downloadControls');
+            
+            if (isDownloadMode) {
+                // 进入下载模式
+                downloadBtn.style.background = 'linear-gradient(135deg, #1890ff, #096dd9)';
+                downloadBtn.querySelector('.btn-text').textContent = '取消';
+                downloadControls.classList.add('show');
+                
+                // 隐藏下载按钮
+                downloadBtn.style.display = 'none';
+                
+                // 添加选择样式
+                photoItems.forEach(item => {
+                    item.classList.add('selectable');
+                });
+            } else {
+                // 退出下载模式
+                downloadBtn.style.background = 'linear-gradient(135deg, #07c160, #05a34a)';
+                downloadBtn.querySelector('.btn-text').textContent = '下载';
+                downloadControls.classList.remove('show');
+                
+                // 显示下载按钮
+                downloadBtn.style.display = 'flex';
+                
+                clearSelection();
+                
+                // 移除选择样式
+                photoItems.forEach(item => {
+                    item.classList.remove('selectable', 'selected');
+                });
+            }
+            
+            updateSelectionCount();
+        }
+
+        // 切换照片选择状态
+        function togglePhotoSelection(item) {
+            const photoId = item.getAttribute('data-photo-id') || item.href;
+            
+            if (selectedPhotos.has(photoId)) {
+                selectedPhotos.delete(photoId);
+                item.classList.remove('selected');
+            } else {
+                selectedPhotos.add(photoId);
+                item.classList.add('selected');
+            }
+            
+            updateSelectionCount();
+        }
+
+        // 更新选择计数
+        function updateSelectionCount() {
+            const count = selectedPhotos.size;
+            document.getElementById('selected-count').textContent = count;
+            document.getElementById('download-count').textContent = count;
+        }
+
+        // 全选照片
+        function selectAllPhotos() {
+            photoItems.forEach(item => {
+                const photoId = item.getAttribute('data-photo-id') || item.href;
+                selectedPhotos.add(photoId);
+                item.classList.add('selected');
+            });
+            updateSelectionCount();
+        }
+
+        // 清除选择并退出下载模式
+        function clearSelection() {
+            selectedPhotos.clear();
+            photoItems.forEach(item => {
+                item.classList.remove('selected', 'selectable');
+            });
+            updateSelectionCount();
+            
+            // 如果是在下载模式中，退出下载模式
+            if (isDownloadMode) {
+                const downloadBtn = document.getElementById('download-btn');
+                const downloadControls = document.getElementById('downloadControls');
+                
+                downloadBtn.style.background = 'linear-gradient(135deg, #07c160, #05a34a)';
+                downloadBtn.querySelector('.btn-text').textContent = '下载';
+                downloadControls.classList.remove('show');
+                
+                // 显示下载按钮
+                downloadBtn.style.display = 'flex';
+                
+                isDownloadMode = false;
+            }
+        }
+
+        // 显示我的面板
+        function showMyPanel() {
+            document.getElementById('myPanelOverlay').style.display = 'block';
+            document.getElementById('myPanel').classList.add('show');
+        }
+
+        // 隐藏我的面板
+        function hideMyPanel() {
+            document.getElementById('myPanelOverlay').style.display = 'none';
+            document.getElementById('myPanel').classList.remove('show');
+        }
+
+        // 检查登录状态
+        function checkLoginStatus() {
+            const token = localStorage.getItem('user_token');
+            if (token) {
+                // 调用API获取用户信息
+                fetch('/api/user/info', {
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                })
+                .then(response => {
+                    if (response.status === 401) {
+                        // token过期
+                        localStorage.removeItem('user_token');
+                        return null;
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data && data.success) {
+                        userInfo = {
+                            nickname: data.user.nickname,
+                            avatar: data.user.avatar_url,
+                            openid: data.user.openid
+                        };
+                        updateUserInfo();
+                    }
+                })
+                .catch(error => {
+                    console.error('获取用户信息失败:', error);
+                });
+            }
+        }
+
+        // 更新用户信息显示
+        function updateUserInfo() {
+            if (userInfo) {
+                document.getElementById('user-info').style.display = 'block';
+                document.getElementById('login-section').style.display = 'none';
+                document.getElementById('user-avatar').src = userInfo.avatar;
+                document.getElementById('user-nickname').textContent = userInfo.nickname;
+                document.getElementById('user-id').textContent = 'ID: ' + userInfo.openid;
+            } else {
+                document.getElementById('user-info').style.display = 'none';
+                document.getElementById('login-section').style.display = 'block';
+            }
+        }
+
+        // 微信登录
+        function wechatLogin() {
+            // 在手机微信环境中，应该使用微信JS-SDK获取code
+            // 这里模拟获取code的过程
+            const mockCode = 'mock_wechat_code_' + Date.now();
+            
+            // 显示加载中
+            const loginBtn = document.querySelector('.wechat-login-btn');
+            const originalText = loginBtn.innerHTML;
+            loginBtn.innerHTML = '<span class="wechat-icon">⏳</span>登录中...';
+            loginBtn.disabled = true;
+            
+            // 调用后端微信登录接口
+            fetch('/api/wechat/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ code: mockCode })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 登录成功
+                    userInfo = {
+                        nickname: data.user.nickname,
+                        avatar: data.user.avatar_url,
+                        openid: data.user.openid
+                    };
+                    
+                    // 保存token
+                    localStorage.setItem('user_token', data.token);
+                    
+                    updateUserInfo();
+                    hideMyPanel();
+                    
+                    alert('登录成功！');
+                } else {
+                    alert('登录失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('登录错误:', error);
+                alert('登录失败，请检查网络连接');
+            })
+            .finally(() => {
+                // 恢复按钮状态
+                loginBtn.innerHTML = originalText;
+                loginBtn.disabled = false;
+            });
+        }
+
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('user_token');
+            userInfo = null;
+            updateUserInfo();
+        }
+
+        // 前端批量下载选中照片
+        function downloadSelected() {
+            if (selectedPhotos.size === 0) {
+                alert('请先选择要下载的照片');
+                return;
+            }
+
+            if (selectedPhotos.size > 20) {
+                alert('一次最多只能下载20张照片');
+                return;
+            }
+
+            // 显示下载进度
+            showDownloadProgress(0, '正在准备下载...');
+            
+            // 收集文件URL
+            const photoUrls = Array.from(selectedPhotos);
+            let downloadedCount = 0;
+            const totalCount = photoUrls.length;
+            
+            // 逐个下载照片
+            function downloadNextPhoto(index) {
+                if (index >= totalCount) {
+                    // 所有照片下载完成
+                    showDownloadProgress(100, '下载完成！');
+                    setTimeout(() => {
+                        alert(`下载完成！已下载 ${downloadedCount} 张照片到您的手机`);
+                        hideDownloadProgress();
+                        // 退出下载模式
+                        toggleDownloadMode();
+                    }, 1000);
+                    return;
+                }
+                
+                const url = photoUrls[index];
+                const progress = Math.floor((index / totalCount) * 100);
+                showDownloadProgress(progress, `正在下载照片 ${index + 1}/${totalCount}...`);
+                
+                // 创建下载链接
+                const link = document.createElement('a');
+                link.href = url;
+                
+                // 从URL中提取文件名
+                let filename = 'photo_' + (index + 1) + '.jpg';
+                try {
+                    const urlObj = new URL(url);
+                    const pathParts = urlObj.pathname.split('/');
+                    if (pathParts.length > 0) {
+                        const lastPart = pathParts[pathParts.length - 1];
+                        if (lastPart.includes('.')) {
+                            filename = lastPart;
+                        }
+                    }
+                } catch (e) {
+                    // 如果URL解析失败，使用默认文件名
+                }
+                
+                link.download = filename;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                downloadedCount++;
+                
+                // 延迟后下载下一张照片（避免同时下载太多文件）
+                setTimeout(() => {
+                    downloadNextPhoto(index + 1);
+                }, 300);
+            }
+            
+            // 开始下载
+            downloadNextPhoto(0);
+        }
+
+        // 下载单张照片（已废弃，使用批量下载功能）
+        function downloadSinglePhoto(url, callback) {
+            // 在移动端，可以使用a标签下载
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'photo_' + Date.now() + '.jpg';
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // 模拟下载延迟
+            if (callback) setTimeout(callback, 300);
+        }
+
+        // 显示下载进度
+        function showDownloadProgress(percent, message) {
+            let progressBar = document.getElementById('download-progress');
+            if (!progressBar) {
+                progressBar = document.createElement('div');
+                progressBar.id = 'download-progress';
+                progressBar.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: white;
+                    padding: 20px;
+                    border-radius: 10px;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+                    z-index: 2000;
+                    text-align: center;
+                    min-width: 200px;
+                `;
+                
+                const progressContainer = document.createElement('div');
+                progressContainer.style.cssText = `
+                    width: 100%;
+                    height: 20px;
+                    background: #f0f0f0;
+                    border-radius: 10px;
+                    overflow: hidden;
+                    margin: 10px 0;
+                `;
+                
+                const progressFill = document.createElement('div');
+                progressFill.id = 'download-progress-fill';
+                progressFill.style.cssText = `
+                    width: 0%;
+                    height: 100%;
+                    background: linear-gradient(90deg, #07c160, #05a34a);
+                    transition: width 0.3s;
+                `;
+                
+                progressContainer.appendChild(progressFill);
+                
+                const messageEl = document.createElement('p');
+                messageEl.id = 'download-message';
+                messageEl.style.margin = '0 0 10px 0';
+                
+                const percentEl = document.createElement('p');
+                percentEl.id = 'download-percent';
+                percentEl.style.margin = '10px 0 0 0';
+                percentEl.style.fontWeight = 'bold';
+                
+                progressBar.appendChild(messageEl);
+                progressBar.appendChild(progressContainer);
+                progressBar.appendChild(percentEl);
+                
+                document.body.appendChild(progressBar);
+            }
+            
+            document.getElementById('download-progress-fill').style.width = percent + '%';
+            document.getElementById('download-percent').textContent = percent + '%';
+            if (message) {
+                document.getElementById('download-message').textContent = message;
+            }
+        }
+
+        // 隐藏下载进度
+        function hideDownloadProgress() {
+            const progressBar = document.getElementById('download-progress');
+            if (progressBar) {
+                progressBar.remove();
+            }
+        }
     </script>
 </body>
 </html>
