@@ -64,12 +64,22 @@ func GetExplorerPageOrFile(c *gin.Context) {
 			return
 		}
 
+		// 查询活动信息（以 path 作为 NanoID 关联）
+		activity, _ := model.GetActivityByNanoID(path)
+		// 异步更新浏览次数，不阻塞页面响应
+		if activity != nil {
+			go model.IncrVisitCount(path)
+			// 页面展示用 +1 后的值（乐观显示）
+			activity.VisitCount++
+		}
+
 		c.HTML(http.StatusOK, "explorer.html", gin.H{
 			"message":        "",
 			"option":         common.OptionMap,
 			"username":       c.GetString("username"),
 			"files":          localFilesPtr,
 			"readmeFileLink": readmeFileLink,
+			"activity":       activity, // 可为 nil（非活动目录时）
 		})
 	} else {
 		c.File(filepath.Join(common.ExplorerRootPath, path))

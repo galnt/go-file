@@ -41,7 +41,8 @@ func InitDB() (*gorm.DB, error) {
 		db, err = gorm.Open(mysql.Open(os.Getenv("SQL_DSN")), gormConfig)
 	} else {
 		// Use SQLite (glebarez/sqlite - pure Go, no CGO)
-		db, err = gorm.Open(sqlite.Open(common.SQLitePath), gormConfig)
+		// _loc=auto 让驱动自动将 TEXT 格式的时间字符串解析为 time.Time
+		db, err = gorm.Open(sqlite.Open(common.SQLitePath+"?_loc=auto"), gormConfig)
 	}
 
 	if err != nil {

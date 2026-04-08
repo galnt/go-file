@@ -349,11 +349,17 @@
 <body>
 
     <header class="header">
-        <h1>11.27 茶与艺的邂逅</h1>
+        {{if .activity}}
+        <h1>{{.activity.EventDate}} {{.activity.Location}}</h1>
         <div class="header-info">
-            已有 3980 人浏览 · 活动时间: 2025.11.27<br>
-            活动地点: 广东 深圳
+            已有 <strong>{{.activity.VisitCount}}</strong> 人浏览
+            {{if .activity.EventDate}} · 活动时间: {{.activity.EventDate}}{{end}}
+            {{if .activity.Location}}<br>活动地点: {{.activity.Location}}{{end}}
         </div>
+        {{else}}
+        <h1>照片直播间</h1>
+        <div class="header-info">照片分享页面</div>
+        {{end}}
     </header>
 
     {{if .message}}
