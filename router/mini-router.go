@@ -11,8 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin" // 纯 Go 实现，无需 CGO
-	// "gorm.io/gorm"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 	gonanoid "github.com/matoous/go-nanoid/v2"
 )
 
@@ -97,6 +96,26 @@ func setMiniRouter(router *gin.Engine) {
 					user.LastLogin = time.Now()
 					model.DB.Save(&user)
 				}
+
+				// 2. 登录时检查 path 参数，写入浏览记录（仅当对应的 Activity 存在时）
+				pathNanoID := c.Query("path")
+				if pathNanoID != "" {
+					var activity model.Activity
+					if err := model.DB.Where("nano_id = ?", pathNanoID).First(&activity).Error; err == nil {
+						// Activity 存在，记录浏览历史
+						// 构建完整URL（实际前端可能只传NanoID，这里按需求记录完整URL）
+						browseURL := fmt.Sprintf("http://127.0.0.1:3000/explorer?path=%s", pathNanoID)
+						record := model.BrowseHistory{
+							OpenID:        wxRes.OpenID,
+							NanoID:        pathNanoID,
+							BrowseURL:     browseURL,
+							GraphicRecord: "", // 图形记录先留空，后续根据需求填充
+							ViewTime:      time.Now(),
+						}
+						model.DB.Create(&record)
+					}
+				}
+
 				c.JSON(200, gin.H{"openid": user.OpenID, "user": user})
 			} else {
 				c.JSON(401, gin.H{"error": "Login failed"})
@@ -201,6 +220,66 @@ func setMiniRouter(router *gin.Engine) {
 			// 根据 openid 查询，并按 ID 倒序排列（最新发布的在前面）
 			model.DB.Where("open_id = ?", openid).Order("id desc").Find(&activities)
 			c.JSON(200, activities)
+		})
+
+		// 3. 浏览历史列表（关联 Activity 展示活动名称、地点、日期）
+		api.GET("/activity/history", func(c *gin.Context) {
+			openid := c.Query("openid")
+			if openid == "" {
+				c.JSON(400, gin.H{"error": "openid 参数不能为空"})
+				return
+			}
+
+			// 查询该用户的浏览记录，按浏览时间倒序
+			var records []model.BrowseHistory
+			model.DB.Where("openid = ?", openid).Order("view_time desc").Find(&records)
+
+			// 收集所有 NanoID，批量查询对应 Activity
+			nanoIDList := make([]string, 0, len(records))
+			for _, r := range records {
+				if r.NanoID != "" {
+					nanoIDList = append(nanoIDList, r.NanoID)
+				}
+			}
+
+			var activities []model.Activity
+			if len(nanoIDList) > 0 {
+				model.DB.Where("nano_id IN ?", nanoIDList).Find(&activities)
+			}
+
+			// 建立 NanoID -> Activity 的 Map，方便关联
+			activityMap := make(map[string]model.Activity)
+			for _, a := range activities {
+				activityMap[a.NanoID] = a
+			}
+
+			// 组装最终响应：浏览记录 + 对应活动信息
+			type HistoryItem struct {
+				ID           uint   `json:"id"`
+				NanoID       string `json:"nano_id"`
+				BrowseURL    string `json:"browse_url"`    // 新增：浏览URL
+				ViewTime     string `json:"view_time"`
+				ActivityName string `json:"activity_name"` // 活动名称（使用Location）
+				Location     string `json:"location"`      // 地点
+				EventDate    string `json:"event_date"`    // 日期
+			}
+			var history []HistoryItem
+			for _, r := range records {
+				item := HistoryItem{
+					ID:        r.ID,
+					NanoID:    r.NanoID,
+					BrowseURL: r.BrowseURL,
+					ViewTime:  r.ViewTime.Format("2006-01-02 15:04:05"),
+				}
+				if act, ok := activityMap[r.NanoID]; ok {
+					item.ActivityName = act.Location // 暂时用Location作为活动名称
+					item.Location = act.Location
+					item.EventDate = act.EventDate
+				}
+				history = append(history, item)
+			}
+
+			c.JSON(200, gin.H{"data": history})
 		})
 
 		api.GET("/all_activities", func(c *gin.Context) {
