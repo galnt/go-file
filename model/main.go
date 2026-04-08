@@ -4,9 +4,10 @@ import (
 	"go-file/common"
 	"os"
 
-	_ "github.com/glebarez/sqlite"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
+	"github.com/glebarez/sqlite"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 var DB *gorm.DB
@@ -22,32 +23,39 @@ func createAdminAccount() {
 	}).FirstOrCreate(&user)
 }
 
-func CountTable(tableName string) (num int) {
+func CountTable(tableName string) (num int64) {
 	DB.Table(tableName).Count(&num)
 	return
 }
 
-func InitDB() (db *gorm.DB, err error) {
+func InitDB() (*gorm.DB, error) {
+	var db *gorm.DB
+	var err error
+
+	gormConfig := &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	}
+
 	if os.Getenv("SQL_DSN") != "" {
 		// Use MySQL
-		db, err = gorm.Open("mysql", os.Getenv("SQL_DSN"))
+		db, err = gorm.Open(mysql.Open(os.Getenv("SQL_DSN")), gormConfig)
 	} else {
-		// Use SQLite
-		db, err = gorm.Open("sqlite", common.SQLitePath)
+		// Use SQLite (glebarez/sqlite - pure Go, no CGO)
+		db, err = gorm.Open(sqlite.Open(common.SQLitePath), gormConfig)
 	}
-	if err == nil {
-		DB = db
-		db.AutoMigrate(&File{})
-		db.AutoMigrate(&Image{})
-		db.AutoMigrate(&User{})
-		db.AutoMigrate(&Option{})
 
-		// 小程序相关表
-		db.AutoMigrate(&WeChatUser{}, &Activity{}, &ActivityPhoto{})
-		createAdminAccount()
-		return DB, err
-	} else {
+	if err != nil {
 		common.FatalLog("failed to connect to database: " + err.Error())
+		return nil, err
 	}
-	return nil, err
+
+	DB = db
+	DB.AutoMigrate(&File{})
+	DB.AutoMigrate(&Image{})
+	DB.AutoMigrate(&User{})
+	DB.AutoMigrate(&Option{})
+	DB.AutoMigrate(&WeChatUser{}, &Activity{}, &ActivityPhoto{})
+
+	createAdminAccount()
+	return DB, nil
 }

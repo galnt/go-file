@@ -14,8 +14,7 @@ type Option struct {
 
 func AllOption() ([]*Option, error) {
 	var options []*Option
-	var err error
-	err = DB.Find(&options).Error
+	err := DB.Find(&options).Error
 	return options, err
 }
 
@@ -40,17 +39,15 @@ func UpdateOption(key string, value string) error {
 		return errors.New("未启用 Redis，无法启用统计功能")
 	}
 
-	// Save to database first
 	option := Option{
 		Key:   key,
 		Value: value,
 	}
-	// When updating with struct it will only update non-zero fields by default
-	// So we have to use Select here
-	if DB.Model(&option).Where("key = ?", key).Update("value", option.Value).RowsAffected == 0 {
+	// GORM v2: use Save or explicit Update
+	result := DB.Model(&option).Where("key = ?", key).Update("value", option.Value)
+	if result.RowsAffected == 0 {
 		DB.Create(&option)
 	}
-	// Update OptionMap
 	updateOptionMap(key, value)
 	return nil
 }

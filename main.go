@@ -13,7 +13,7 @@ import (
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
 func loadTemplate() *template.Template {
@@ -39,8 +39,12 @@ func main() {
 		common.FatalLog(err)
 	}
 	defer func(db *gorm.DB) {
-		err := db.Close()
+		sqlDB, err := db.DB()
 		if err != nil {
+			common.FatalLog("failed to get underlying sql.DB: " + err.Error())
+			return
+		}
+		if err = sqlDB.Close(); err != nil {
 			common.FatalLog("failed to close database: " + err.Error())
 		}
 	}(db)

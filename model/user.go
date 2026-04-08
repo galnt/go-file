@@ -3,13 +3,13 @@ package model
 import (
 	"strings"
 
-	_ "github.com/glebarez/sqlite"
+	"gorm.io/gorm"
 )
 
 type User struct {
-	Id          int    `json:"id"`
-	Username    string `json:"username" gorm:"unique;"`
-	Password    string `json:"password" gorm:"not null;"`
+	Id          int    `json:"id" gorm:"primaryKey;autoIncrement"`
+	Username    string `json:"username" gorm:"unique;not null"`
+	Password    string `json:"password" gorm:"not null"`
 	DisplayName string `json:"displayName"`
 	Role        int    `json:"role" gorm:"type:int;default:1"`   // admin, common
 	Status      int    `json:"status" gorm:"type:int;default:1"` // enabled, disabled
@@ -17,27 +17,19 @@ type User struct {
 }
 
 func (user *User) Insert() error {
-	var err error
-	err = DB.Create(user).Error
-	return err
+	return DB.Create(user).Error
 }
 
 func (user *User) Update() error {
-	var err error
-	err = DB.Model(user).Updates(user).Error
-	return err
+	return DB.Model(user).Updates(user).Error
 }
 
 func (user *User) Delete() error {
-	var err error
-	err = DB.Delete(user).Error
-	return err
+	return DB.Delete(user).Error
 }
 
 func (user *User) ValidateAndFill() {
-	// When querying with struct, GORM will only query with non-zero fields,
-	// that means if your field’s value is 0, '', false or other zero values,
-	// it won’t be used to build query conditions
+	// GORM v2: use map or Select to query with zero-value fields
 	DB.Where(&user).First(&user)
 }
 
@@ -47,8 +39,12 @@ func ValidateUserToken(token string) (user *User) {
 	}
 	token = strings.Replace(token, "Bearer ", "", 1)
 	user = &User{}
-	if DB.Where("token = ?", token).First(user).RowsAffected == 1 {
+	result := DB.Where("token = ?", token).First(user)
+	if result.RowsAffected == 1 {
 		return user
 	}
 	return nil
 }
+
+// Ensure gorm.ErrRecordNotFound is accessible
+var _ = gorm.ErrRecordNotFound
