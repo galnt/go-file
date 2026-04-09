@@ -49,6 +49,73 @@ func Login(c *gin.Context) {
 	return
 }
 
+// Register 用户注册接口
+func Register(c *gin.Context) {
+	username := c.PostForm("username")
+	password := c.PostForm("password")
+	displayName := c.PostForm("display_name")
+	if displayName == "" {
+		displayName = username
+	}
+
+	// 简单验证
+	if username == "" || password == "" {
+		c.HTML(http.StatusBadRequest, "register.html", gin.H{
+			"message":  "用户名和密码不能为空",
+			"option":   common.OptionMap,
+			"username": c.GetString("username"),
+		})
+		return
+	}
+
+	// 检查用户名是否已存在
+	var existingUser model.User
+	if err := model.DB.Where("username = ?", username).First(&existingUser).Error; err == nil {
+		c.HTML(http.StatusBadRequest, "register.html", gin.H{
+			"message":  "用户名已存在",
+			"option":   common.OptionMap,
+			"username": c.GetString("username"),
+		})
+		return
+	}
+
+	// 创建新用户
+	user := model.User{
+		Username:    username,
+		Password:    password,
+		DisplayName: displayName,
+		Role:        common.RoleCommonUser,
+		Status:      common.UserStatusEnabled,
+	}
+	if err := user.Insert(); err != nil {
+		c.HTML(http.StatusInternalServerError, "register.html", gin.H{
+			"message":  "注册失败：" + err.Error(),
+			"option":   common.OptionMap,
+			"username": c.GetString("username"),
+		})
+		return
+	}
+
+	// 注册成功后自动登录
+	session := sessions.Default(c)
+	session.Set("id", user.Id)
+	session.Set("username", username)
+	session.Set("role", user.Role)
+	err := session.Save()
+	if err != nil {
+		c.HTML(http.StatusInternalServerError, "register.html", gin.H{
+			"message":  "登录会话保存失败，请重新登录",
+			"option":   common.OptionMap,
+			"username": c.GetString("username"),
+		})
+		return
+	}
+
+	// 重定向到首页
+	c.Redirect(http.StatusFound, "/")
+	return
+}
+
 func Logout(c *gin.Context) {
 	session := sessions.Default(c)
 	session.Options(sessions.Options{MaxAge: -1})

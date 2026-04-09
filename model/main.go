@@ -54,8 +54,9 @@ func InitDB() (*gorm.DB, error) {
 	DB.AutoMigrate(&File{})
 	DB.AutoMigrate(&Image{})
 	DB.AutoMigrate(&User{})
+	DB.AutoMigrate(&UserAuth{})
 	DB.AutoMigrate(&Option{})
-	DB.AutoMigrate(&WeChatUser{}, &Activity{}, &ActivityPhoto{}, &BrowseHistory{})
+	DB.AutoMigrate(&Activity{}, &ActivityPhoto{}, &BrowseHistory{})
 
 	createAdminAccount()
 	return DB, nil

@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin" // 纯 Go 实现，无需 CGO
-	"gorm.io/gorm"
 	gonanoid "github.com/matoous/go-nanoid/v2"
+	"gorm.io/gorm"
 )
 
 // --- 配置区 ---
@@ -87,14 +87,11 @@ func setMiniRouter(router *gin.Engine) {
 			json.NewDecoder(resp.Body).Decode(&wxRes)
 
 			if wxRes.OpenID != "" {
-				var user model.WeChatUser
-				// 1. 查找或创建用户
-				model.DB.Where(model.WeChatUser{OpenID: wxRes.OpenID}).FirstOrCreate(&user)
-				if info.NickName != "" && info.NickName != "微信用户" {
-					user.NickName = info.NickName
-					user.AvatarURL = info.AvatarUrl
-					user.LastLogin = time.Now()
-					model.DB.Save(&user)
+				// 使用 User 和 UserAuth 对象，不再使用 WeChatUser
+				user, auth, err := model.FindOrCreateUserByWeChat(wxRes.OpenID, "wechat_mp", info.NickName, info.AvatarUrl)
+				if err != nil {
+					c.JSON(500, gin.H{"error": "用户处理失败: " + err.Error()})
+					return
 				}
 
 				// 2. 登录时检查 path 参数，写入浏览记录（仅当对应的 Activity 存在时）
@@ -106,7 +103,7 @@ func setMiniRouter(router *gin.Engine) {
 						// 构建完整URL（实际前端可能只传NanoID，这里按需求记录完整URL）
 						browseURL := fmt.Sprintf("http://127.0.0.1:3000/explorer?path=%s", pathNanoID)
 						record := model.BrowseHistory{
-							OpenID:        wxRes.OpenID,
+							OpenID:        wxRes.OpenID, // 仍然使用微信OpenID作为标识
 							NanoID:        pathNanoID,
 							BrowseURL:     browseURL,
 							GraphicRecord: "", // 图形记录先留空，后续根据需求填充
@@ -116,7 +113,8 @@ func setMiniRouter(router *gin.Engine) {
 					}
 				}
 
-				c.JSON(200, gin.H{"openid": user.OpenID, "user": user})
+				// 返回用户信息，兼容原有前端（返回openid和user对象）
+				c.JSON(200, gin.H{"openid": auth.Identifier, "user": user})
 			} else {
 				c.JSON(401, gin.H{"error": "Login failed"})
 			}
@@ -138,6 +136,10 @@ func setMiniRouter(router *gin.Engine) {
 		// 2. 接口实现
 		api.POST("/activity", func(c *gin.Context) {
 			openid := c.PostForm("openid")
+
+			// 根据openid转换为用户ID
+			openid = model.GetUserIdByOpenId(openid)
+
 			activityIDStr := c.PostForm("activity_id")
 
 			// --- 场景一：创建主表记录 (有封面图 cover) ---
@@ -257,7 +259,7 @@ func setMiniRouter(router *gin.Engine) {
 			type HistoryItem struct {
 				ID           uint   `json:"id"`
 				NanoID       string `json:"nano_id"`
-				BrowseURL    string `json:"browse_url"`    // 新增：浏览URL
+				BrowseURL    string `json:"browse_url"` // 新增：浏览URL
 				ViewTime     string `json:"view_time"`
 				ActivityName string `json:"activity_name"` // 活动名称（使用Location）
 				Location     string `json:"location"`      // 地点

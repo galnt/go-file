@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+{{template "header" .}}
+<body>
+<div>
+    {{template "nav" .}}
+    <div class="container">
+        <div class="narrow-container">
+            {{if .message }}
+            <article id="messageToast" class="message is-info">
+                <div class="message-body" id="messageToastText">
+                    {{.message}}
+                </div>
+            </article>
+            {{ end }}
+
+            <h2 class="title">浏览历史</h2>
+            <p class="subtitle">您最近浏览的活动记录</p>
+
+            {{if .history}}
+            <div class="table-container">
+                <table class="table is-fullwidth is-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>活动名称</th>
+                            <th>浏览URL</th>
+                            <th>地点</th>
+                            <th>活动日期</th>
+                            <th>浏览时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .history}}
+                        <tr>
+                            <td>{{.id}}</td>
+                            <td>{{.activity_name}}</td>
+                            <td><a href="{{.browse_url}}" target="_blank">点击查看</a></td>
+                            <td>{{.location}}</td>
+                            <td>{{.event_date}}</td>
+                            <td>{{.view_time}}</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+            {{else}}
+            <div class="has-text-centered mt-6">
+                <p class="is-size-5">暂无浏览历史</p>
+                <p class="is-size-6 mt-2">您还没有浏览过任何活动，或者未绑定微信账号。</p>
+                <a class="button is-primary mt-4" href="/explorer">去浏览活动</a>
+            </div>
+            {{end}}
+        </div>
+    </div>
+    {{template "footer" .}}
+</div>
+
+{{template "modal"}}
+
+</body>
+</html>

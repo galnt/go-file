@@ -19,6 +19,8 @@ func setWebRouter(router *gin.Engine) {
 	router.GET("/login", middleware.ExtractUserInfo(), controller.GetLoginPage)
 	router.POST("/login", middleware.CriticalRateLimit(), controller.Login)
 	router.GET("/logout", controller.Logout)
+	router.GET("/register", middleware.ExtractUserInfo(), controller.GetRegisterPage)
+	router.POST("/register", middleware.CriticalRateLimit(), controller.Register)
 	router.GET("/help", middleware.ExtractUserInfo(), controller.GetHelpPage)
 
 	// Download files
@@ -43,5 +45,6 @@ func setWebRouter(router *gin.Engine) {
 	basicAuth.Use(middleware.WebAuth()) // WebAuth already has username in context
 	{
 		basicAuth.GET("/manage", controller.GetManagePage)
+		basicAuth.GET("/history", controller.GetHistoryPage)
 	}
 }
