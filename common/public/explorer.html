@@ -344,6 +344,102 @@
             height: 20px;
             z-index: 1;
         }
+
+        /* 帐号密码登录样式 */
+        .account-login-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .account-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #07c160;
+        }
+
+        .account-login-btn,
+        .account-register-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #1890ff, #096dd9);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .account-register-btn {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+        }
+
+        .form-switch {
+            text-align: center;
+            font-size: 13px;
+            color: #666;
+            margin: 10px 0 0;
+        }
+
+        .form-switch a {
+            color: #1890ff;
+            text-decoration: none;
+        }
+
+        .form-switch a:hover {
+            text-decoration: underline;
+        }
+
+        /* 浏览历史列表 */
+        .history-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            padding: 10px;
+        }
+
+        .history-item {
+            padding: 10px;
+            border-bottom: 1px solid #f5f5f5;
+            font-size: 13px;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-item .activity-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .history-item .activity-info {
+            color: #888;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .history-item .browse-time {
+            color: #999;
+            font-size: 11px;
+        }
     </style>
 </head>
 <body>
@@ -469,6 +565,52 @@
                     微信登录
                 </button>
                 <p class="login-tip">登录后可以保存您的下载记录</p>
+                
+                <!-- 帐号密码登录/注册 -->
+                <div class="account-login-section">
+                    <p style="margin: 20px 0 10px; text-align: center; font-size: 14px; color: #666;">或使用帐号密码登录</p>
+                    
+                    <!-- 登录表单 -->
+                    <form id="account-login-form" class="account-form">
+                        <div class="form-group">
+                            <input type="text" id="login-username" placeholder="用户名或邮箱" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="password" id="login-password" placeholder="密码" required>
+                        </div>
+                        <button type="submit" class="account-login-btn">登录</button>
+                        <p class="form-switch">还没有账号？<a href="#" onclick="showRegisterForm()">立即注册</a></p>
+                    </form>
+                    
+                    <!-- 注册表单 -->
+                    <form id="account-register-form" class="account-form" style="display: none;">
+                        <div class="form-group">
+                            <input type="text" id="register-username" placeholder="用户名" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="email" id="register-email" placeholder="邮箱（可选）">
+                        </div>
+                        <div class="form-group">
+                            <input type="password" id="register-password" placeholder="密码" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="password" id="register-confirm-password" placeholder="确认密码" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" id="register-display-name" placeholder="显示名称（可选）">
+                        </div>
+                        <button type="submit" class="account-register-btn">注册</button>
+                        <p class="form-switch">已有账号？<a href="#" onclick="showLoginForm()">立即登录</a></p>
+                    </form>
+                    
+                    <!-- 浏览历史展示 -->
+                    <div id="browse-history-section" style="display: none; margin-top: 20px;">
+                        <h4 style="margin-bottom: 10px;">浏览记录</h4>
+                        <div id="browse-history-list" class="history-list">
+                            <!-- 动态加载 -->
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -818,13 +960,6 @@
             });
         }
 
-        // 退出登录
-        function logout() {
-            localStorage.removeItem('user_token');
-            userInfo = null;
-            updateUserInfo();
-        }
-
         // 前端批量下载选中照片
         function downloadSelected() {
             if (selectedPhotos.size === 0) {
@@ -986,6 +1121,235 @@
                 progressBar.remove();
             }
         }
+
+        // 帐号密码登录/注册功能
+        // 显示注册表单
+        function showRegisterForm() {
+            document.getElementById('account-login-form').style.display = 'none';
+            document.getElementById('account-register-form').style.display = 'flex';
+            return false;
+        }
+
+        // 显示登录表单
+        function showLoginForm() {
+            document.getElementById('account-register-form').style.display = 'none';
+            document.getElementById('account-login-form').style.display = 'flex';
+            return false;
+        }
+
+        // 处理登录表单提交
+        document.getElementById('account-login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value;
+            
+            if (!username || !password) {
+                alert('请输入用户名和密码');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/user/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // 登录成功
+                    localStorage.setItem('userToken', data.token || '');
+                    localStorage.setItem('userId', data.user_id || '');
+                    localStorage.setItem('username', data.username || '');
+                    
+                    alert('登录成功！');
+                    showUserInfo(data.username);
+                    loadBrowseHistory();
+                } else {
+                    alert('登录失败：' + (data.message || '未知错误'));
+                }
+            } catch (error) {
+                console.error('登录请求失败:', error);
+                alert('登录请求失败，请检查网络连接');
+            }
+        });
+
+        // 处理注册表单提交
+        document.getElementById('account-register-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('register-username').value.trim();
+            const email = document.getElementById('register-email').value.trim();
+            const password = document.getElementById('register-password').value;
+            const confirmPassword = document.getElementById('register-confirm-password').value;
+            const displayName = document.getElementById('register-display-name').value.trim() || username;
+            
+            if (!username || !password) {
+                alert('用户名和密码不能为空');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                alert('两次输入的密码不一致');
+                return;
+            }
+            
+            if (password.length < 6) {
+                alert('密码长度至少为6位');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/user/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        email: email || '',
+                        password: password,
+                        display_name: displayName
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('注册成功！请使用新账号登录');
+                    showLoginForm();
+                    // 清空注册表单
+                    document.getElementById('register-username').value = '';
+                    document.getElementById('register-email').value = '';
+                    document.getElementById('register-password').value = '';
+                    document.getElementById('register-confirm-password').value = '';
+                    document.getElementById('register-display-name').value = '';
+                } else {
+                    alert('注册失败：' + (data.message || '未知错误'));
+                }
+            } catch (error) {
+                console.error('注册请求失败:', error);
+                alert('注册请求失败，请检查网络连接');
+            }
+        });
+
+        // 显示用户信息
+        function showUserInfo(username) {
+            const loginSection = document.getElementById('login-section');
+            if (loginSection) {
+                loginSection.innerHTML = `
+                    <div style="text-align: center; padding: 20px 0;">
+                        <p>欢迎回来，${username}！</p>
+                        <div id="browse-history-section">
+                            <h4 style="margin-bottom: 10px;">浏览记录</h4>
+                            <div id="browse-history-list" class="history-list">
+                                <!-- 动态加载 -->
+                            </div>
+                        </div>
+                        <button onclick="logout()" style="margin-top: 15px; padding: 8px 16px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                            退出登录
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // 加载浏览历史
+        async function loadBrowseHistory() {
+            try {
+                const token = localStorage.getItem('userToken');
+                const userId = localStorage.getItem('userId');
+                
+                if (!token || !userId) {
+                    console.log('用户未登录，无法加载浏览历史');
+                    return;
+                }
+                
+                const response = await fetch(`/api/user/${userId}/browse-history`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        displayBrowseHistory(result.data);
+                    } else {
+                        console.error('加载浏览历史失败:', result.message);
+                    }
+                } else {
+                    console.error('加载浏览历史失败:', response.status);
+                }
+            } catch (error) {
+                console.error('加载浏览历史请求失败:', error);
+            }
+        }
+
+        // 显示浏览历史
+        function displayBrowseHistory(history) {
+            const historyList = document.getElementById('browse-history-list');
+            if (!historyList) return;
+            
+            if (!history || history.length === 0) {
+                historyList.innerHTML = '<div class="history-item">暂无浏览记录</div>';
+                return;
+            }
+            
+            // 按活动时间排序（最新的在前面）
+            history.sort((a, b) => new Date(b.activity_time || b.created_at) - new Date(a.activity_time || a.created_at));
+            
+            let html = '';
+            history.forEach(item => {
+                const activityName = item.activity_name || item.name || '未知活动';
+                const activityInfo = item.activity_info || item.description || '';
+                const browseTime = item.activity_time || item.created_at || '';
+                const formattedTime = browseTime ? new Date(browseTime).toLocaleString('zh-CN') : '';
+                
+                html += `
+                    <div class="history-item">
+                        <div class="activity-name">${activityName}</div>
+                        <div class="activity-info">${activityInfo}</div>
+                        <div class="browse-time">${formattedTime}</div>
+                    </div>
+                `;
+            });
+            
+            historyList.innerHTML = html;
+        }
+
+        // 退出登录
+        function logout() {
+            // 清除所有登录相关的localStorage项
+            localStorage.removeItem('userToken');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('username');
+            localStorage.removeItem('user_token');
+            
+            // 清除全局用户信息变量
+            userInfo = null;
+            
+            // 重新加载页面以显示登录界面
+            location.reload();
+        }
+
+        // 页面加载时检查登录状态
+        document.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('userToken');
+            const username = localStorage.getItem('username');
+            
+            if (token && username) {
+                showUserInfo(username);
+                loadBrowseHistory();
+            }
+        });
     </script>
 </body>
 </html>

@@ -17,6 +17,10 @@ func setApiRouter(router *gin.Engine) {
 	router.POST("/api/wechat/login", controller.WechatLogin)
 	router.GET("/temp/:filename", controller.GetTempFile)
 	
+	// 帐号密码登录/注册API（不需要认证）
+	router.POST("/api/user/login", controller.APIUserLogin)
+	router.POST("/api/user/register", controller.APIUserRegister)
+	
 	basicAuth := router.Group("/api")
 	basicAuth.Use(middleware.ApiAuth())
 	{
@@ -27,6 +31,7 @@ func setApiRouter(router *gin.Engine) {
 		
 		// 需要认证的API
 		basicAuth.GET("/user/info", controller.GetUserInfo)
+		basicAuth.GET("/user/:user_id/browse-history", controller.GetUserBrowseHistory)
 		basicAuth.POST("/download/batch", controller.BatchDownload)
 	}
 	adminAuth := router.Group("/api")
