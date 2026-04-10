@@ -886,6 +886,8 @@
                             openid: data.user.openid
                         };
                         updateUserInfo();
+                        // 记录浏览历史
+                        recordBrowseHistory();
                     }
                 })
                 .catch(error => {
@@ -943,6 +945,9 @@
                     
                     updateUserInfo();
                     hideMyPanel();
+                    
+                    // 记录浏览历史
+                    recordBrowseHistory();
                     
                     alert('登录成功！');
                 } else {
@@ -1172,6 +1177,8 @@
                     alert('登录成功！');
                     showUserInfo(data.username);
                     loadBrowseHistory();
+                    // 记录浏览历史
+                    recordBrowseHistory();
                 } else {
                     alert('登录失败：' + (data.message || '未知错误'));
                 }
@@ -1272,10 +1279,11 @@
                     return;
                 }
                 
-                const response = await fetch(`/api/user/${userId}/browse-history`, {
+                const response = await fetch(`/api/user/browse-history`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
-                    }
+                    }// ,
+                    // body: JSON.stringify({ user_id: userId })
                 });
                 
                 if (response.ok) {
@@ -1325,8 +1333,61 @@
             historyList.innerHTML = html;
         }
 
+        // 记录浏览历史
+        function recordBrowseHistory() {
+            const token = localStorage.getItem('userToken') || localStorage.getItem('user_token');
+            
+            if (!token) {
+                console.log('用户未登录，不记录浏览历史');
+                return;
+            }
+            
+            // 获取用户ID：优先从localStorage，其次从全局userInfo对象
+            let userId = localStorage.getItem('userId');
+            if (!userId && window.userInfo && window.userInfo.openid) {
+                userId = window.userInfo.openid;
+            }
+            
+            // 获取当前页面信息
+            const urlParams = new URLSearchParams(window.location.search);
+            const path = urlParams.get('path') || window.location.pathname;
+            const activityName = document.querySelector('.header h1')?.textContent || '未知活动';
+            const activityInfo = document.querySelector('.header-info')?.textContent || '';
+            
+            // 调用API记录浏览历史
+            fetch('/api/browse-history', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify({
+                    user_id: userId || '', // 允许为空，后端会从token中获取用户ID
+                    path: path,
+                    activity_name: activityName,
+                    activity_info: activityInfo
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.success) {
+                    console.log('浏览历史记录成功');
+                    // 记录成功后，刷新浏览历史列表
+                    loadBrowseHistory();
+                } else {
+                    console.log('浏览历史记录失败:', data?.message);
+                }
+            })
+            .catch(error => {
+                console.error('记录浏览历史请求失败:', error);
+            });
+        }
+
         // 退出登录
         function logout() {
+            console.log('退出登录函数被调用');
+            alert('正在退出登录...');
+            
             // 清除所有登录相关的localStorage项
             localStorage.removeItem('userToken');
             localStorage.removeItem('userId');
@@ -1335,6 +1396,13 @@
             
             // 清除全局用户信息变量
             userInfo = null;
+            
+            // 输出清除后的状态
+            console.log('清除后 userToken:', localStorage.getItem('userToken'));
+            console.log('清除后 user_token:', localStorage.getItem('user_token'));
+            
+            // 立即更新UI，隐藏用户信息，显示登录界面
+            updateUserInfo();
             
             // 重新加载页面以显示登录界面
             location.reload();
@@ -1348,6 +1416,8 @@
             if (token && username) {
                 showUserInfo(username);
                 loadBrowseHistory();
+                // 记录浏览历史
+                recordBrowseHistory();
             }
         });
     </script>

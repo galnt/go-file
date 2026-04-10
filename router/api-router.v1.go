@@ -1,9 +1,10 @@
 package router
 
 import (
-	"github.com/gin-gonic/gin"
 	"go-file/controller"
 	"go-file/middleware"
+
+	"github.com/gin-gonic/gin"
 )
 
 func setApiRouter(router *gin.Engine) {
@@ -12,15 +13,15 @@ func setApiRouter(router *gin.Engine) {
 	router.POST("/api/file", middleware.FileUploadPermissionCheck(), controller.UploadFile)
 	router.POST("/api/image", middleware.ImageUploadPermissionCheck(), controller.UploadImage)
 	router.GET("/api/notice", controller.GetNotice)
-	
+
 	// 微信相关API（不需要认证）
 	router.POST("/api/wechat/login", controller.WechatLogin)
 	router.GET("/temp/:filename", controller.GetTempFile)
-	
+
 	// 帐号密码登录/注册API（不需要认证）
 	router.POST("/api/user/login", controller.APIUserLogin)
 	router.POST("/api/user/register", controller.APIUserRegister)
-	
+
 	basicAuth := router.Group("/api")
 	basicAuth.Use(middleware.ApiAuth())
 	{
@@ -28,10 +29,11 @@ func setApiRouter(router *gin.Engine) {
 		basicAuth.DELETE("/image", controller.DeleteImage)
 		basicAuth.PUT("/user", middleware.NoTokenAuth(), controller.UpdateSelf)
 		basicAuth.POST("/token", controller.GenerateNewUserToken)
-		
+
 		// 需要认证的API
 		basicAuth.GET("/user/info", controller.GetUserInfo)
-		basicAuth.GET("/user/:user_id/browse-history", controller.GetUserBrowseHistory)
+		basicAuth.GET("/user/browse-history", controller.GetUserBrowseHistory)
+		basicAuth.POST("/browse-history", controller.CreateBrowseHistory)
 		basicAuth.POST("/download/batch", controller.BatchDownload)
 	}
 	adminAuth := router.Group("/api")

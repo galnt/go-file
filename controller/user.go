@@ -3,13 +3,15 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"go-file/common"
 	"go-file/model"
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 func Login(c *gin.Context) {
@@ -428,7 +430,7 @@ func APIUserRegister(c *gin.Context) {
 // GetUserBrowseHistory 获取用户浏览历史
 func GetUserBrowseHistory(c *gin.Context) {
 	userID := c.Param("user_id")
-	
+
 	// 验证token
 	token := c.GetHeader("Authorization")
 	if token == "" {
@@ -438,21 +440,23 @@ func GetUserBrowseHistory(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// 验证token是否有效
 	token = strings.Replace(token, "Bearer ", "", 1)
 	user := model.ValidateUserToken(token)
-	if user == nil || user.UserID != userID {
+	if user == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"message": "无效的令牌或用户ID不匹配",
 		})
 		return
 	}
-	
+
+	userID = user.UserID
+
 	// 获取浏览历史 - 使用userID作为openid查询
 	var browseHistories []model.BrowseHistory
-	err := model.DB.Where("openid = ?", userID).Order("view_time desc").Find(&browseHistories).Error
+	err := model.DB.Where("open_id = ?", userID).Order("view_time desc").Find(&browseHistories).Error
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -460,14 +464,14 @@ func GetUserBrowseHistory(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// 构建响应数据
 	var historyData []map[string]interface{}
 	for _, history := range browseHistories {
 		// 获取关联的活动信息
 		var activity model.Activity
 		model.DB.Where("nano_id = ?", history.NanoID).First(&activity)
-		
+
 		item := map[string]interface{}{
 			"id":            history.ID,
 			"user_id":       history.OpenID,
@@ -479,9 +483,89 @@ func GetUserBrowseHistory(c *gin.Context) {
 		}
 		historyData = append(historyData, item)
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    historyData,
+	})
+}
+
+// CreateBrowseHistory 记录用户浏览历史
+func CreateBrowseHistory(c *gin.Context) {
+	// 验证token
+	token := c.GetHeader("Authorization")
+	if token == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"message": "未授权访问",
+		})
+		return
+	}
+
+	// 验证token是否有效
+	token = strings.Replace(token, "Bearer ", "", 1)
+	user := model.ValidateUserToken(token)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"message": "无效的令牌",
+		})
+		return
+	}
+
+	// 解析请求体
+	var req struct {
+		UserID       string `json:"user_id"`
+		Path         string `json:"path"`
+		ActivityName string `json:"activity_name"`
+		ActivityInfo string `json:"activity_info"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "无效的请求参数",
+		})
+		return
+	}
+
+	// 使用token中的用户ID作为OpenID，如果req.UserID不为空则验证匹配
+	openID := user.UserID
+	if req.UserID != "" && req.UserID != openID {
+		c.JSON(http.StatusForbidden, gin.H{
+			"success": false,
+			"message": "用户ID不匹配",
+		})
+		return
+	}
+
+	// 构建浏览URL：使用path作为NanoID，如果path是相对路径则添加基础URL
+	browseURL := req.Path
+	if !strings.Contains(browseURL, "://") && !strings.HasPrefix(browseURL, "http") {
+		// 假设path是NanoID，构建完整URL
+		browseURL = fmt.Sprintf("/explorer?path=%s", req.Path)
+	}
+
+	// 创建浏览历史记录
+	record := model.BrowseHistory{
+		OpenID:        openID,    // 使用token验证后的用户ID
+		NanoID:        req.Path,  // 假设path就是NanoID
+		BrowseURL:     browseURL, // 构建更完整的URL
+		GraphicRecord: "",        // 图形记录留空
+		ViewTime:      time.Now(),
+	}
+
+	// 保存到数据库
+	if err := model.DB.Create(&record).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "记录浏览历史失败：" + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "记录成功",
 	})
 }
