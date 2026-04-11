@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin" // 纯 Go 实现，无需 CGO
@@ -356,5 +358,575 @@ func setMiniRouter(router *gin.Engine) {
 			model.DB.Model(&model.ActivityPhoto{}).Where("id = ?", photoID).Update("is_active", false)
 			c.JSON(200, gin.H{"status": "success"})
 		})
+
+		// ==================== 打卡功能 API ====================
+
+		// 获取所有打卡活动列表（分页，按开始时间排序）
+		api.GET("/checkin/campaigns", func(c *gin.Context) {
+			userID := c.Query("user_id")
+			pageStr := c.DefaultQuery("page", "1")
+			limitStr := c.DefaultQuery("limit", "20")
+			page, _ := strconv.Atoi(pageStr)
+			limit, _ := strconv.Atoi(limitStr)
+			if page < 1 {
+				page = 1
+			}
+			offset := (page - 1) * limit
+
+			now := time.Now()
+			var campaigns []model.CheckInCampaign
+			var total int64
+
+			// model.DB.Model(&model.CheckInCampaign{}).Where("is_active = ?", true).Count(&total)
+			model.DB.Model(&model.CheckInCampaign{}).Count(&total)
+			model.DB.Where("is_active = ?", "true").
+				Order("start_time desc").
+				Limit(limit).Offset(offset).
+				Find(&campaigns)
+
+			type CampaignItem struct {
+				model.CheckInCampaign
+				StatusText   string `json:"status_text"`
+				TaskCount    int    `json:"task_count"`
+				CheckedCount int    `json:"checked_count"`
+				UserChecked  bool   `json:"user_checked"`
+			}
+
+			result := make([]CampaignItem, 0, len(campaigns))
+			for _, c2 := range campaigns {
+				item := CampaignItem{CheckInCampaign: c2}
+
+				// 状态文本
+				if now.Before(c2.StartTime) {
+					item.StatusText = "未开始"
+				} else if now.After(c2.EndTime) {
+					item.StatusText = "已过期"
+				} else {
+					item.StatusText = "进行中"
+				}
+
+				// 任务数
+				var tc int64
+				model.DB.Model(&model.CheckInTask{}).Where("campaign_id = ?", c2.ID).Count(&tc)
+				item.TaskCount = int(tc)
+
+				// 今日打卡人数（去重）
+				today := now.Format("2006-01-02")
+				var cc int64
+				model.DB.Model(&model.CheckInRecord{}).
+					Where("campaign_id = ? AND check_date = ?", c2.ID, today).
+					Distinct("user_id").Count(&cc)
+				item.CheckedCount = int(cc)
+
+				// 当前用户今日是否已打卡
+				if userID != "" {
+					var uc int64
+					model.DB.Model(&model.CheckInRecord{}).
+						Where("campaign_id = ? AND user_id = ? AND check_date = ?", c2.ID, userID, today).
+						Count(&uc)
+					item.UserChecked = uc > 0
+				}
+
+				result = append(result, item)
+			}
+
+			c.JSON(200, gin.H{
+				"data":     result,
+				"total":    total,
+				"page":     page,
+				"has_more": int64(offset+limit) < total,
+			})
+		})
+
+		// 获取活动详情（含任务列表和动态）
+		api.GET("/checkin/campaign/detail", func(c *gin.Context) {
+			idStr := c.Query("id")
+			userID := c.Query("user_id")
+
+			var campaign model.CheckInCampaign
+			if err := model.DB.First(&campaign, idStr).Error; err != nil {
+				c.JSON(404, gin.H{"error": "活动不存在"})
+				return
+			}
+
+			now := time.Now()
+			today := now.Format("2006-01-02")
+
+			// 获取任务列表（含每个任务的打卡人数和当前用户是否已打卡）
+			var tasks []model.CheckInTask
+			model.DB.Where("campaign_id = ?", campaign.ID).Order("start_time asc").Find(&tasks)
+
+			type TaskItem struct {
+				model.CheckInTask
+				CheckedCount int    `json:"checked_count"`
+				UserChecked  bool   `json:"user_checked"`
+				StatusText   string `json:"status_text"`
+				IsToday      bool   `json:"is_today"`
+			}
+
+			taskItems := make([]TaskItem, 0, len(tasks))
+			for _, t := range tasks {
+				item := TaskItem{CheckInTask: t}
+
+				// 任务状态
+				if now.Before(t.StartTime) {
+					item.StatusText = "未开始"
+				} else if now.After(t.EndTime) {
+					item.StatusText = "已过期"
+				} else {
+					item.StatusText = "进行中"
+					item.IsToday = true
+				}
+
+				// 打卡人数
+				var cc int64
+				model.DB.Model(&model.CheckInRecord{}).
+					Where("task_id = ?", t.ID).
+					Distinct("user_id").Count(&cc)
+				item.CheckedCount = int(cc)
+
+				// 用户是否已打卡该任务
+				if userID != "" {
+					var uc int64
+					model.DB.Model(&model.CheckInRecord{}).
+						Where("task_id = ? AND user_id = ?", t.ID, userID).Count(&uc)
+					item.UserChecked = uc > 0
+				}
+
+				taskItems = append(taskItems, item)
+			}
+
+			// 获取动态（打卡记录，包含用户信息，最新50条）
+			type FeedItem struct {
+				model.CheckInRecord
+				Nickname   string `json:"nickname"`
+				AvatarURL  string `json:"avatar_url"`
+				TaskTitle  string `json:"task_title"`
+				CheckCount int    `json:"check_count"` // 该用户累计打卡次数
+				TaskIndex  int    `json:"task_index"`  // 第几次任务
+			}
+
+			var records []model.CheckInRecord
+			model.DB.Where("campaign_id = ?", campaign.ID).
+				Order("created_at desc").Limit(50).Find(&records)
+
+			// 批量拉取用户信息
+			userIDs := make([]string, 0)
+			for _, r := range records {
+				userIDs = append(userIDs, r.UserID)
+			}
+			var users []model.User
+			if len(userIDs) > 0 {
+				model.DB.Where("user_id IN ?", userIDs).Find(&users)
+			}
+			userMap := make(map[string]model.User)
+			for _, u := range users {
+				userMap[u.UserID] = u
+			}
+
+			// 任务标题Map
+			taskMap := make(map[uint]model.CheckInTask)
+			for _, t := range tasks {
+				taskMap[t.ID] = t
+			}
+
+			feeds := make([]FeedItem, 0, len(records))
+			for _, r := range records {
+				fi := FeedItem{CheckInRecord: r}
+				if u, ok := userMap[r.UserID]; ok {
+					fi.Nickname = u.Nickname
+					fi.AvatarURL = u.AvatarURL
+				}
+				if t, ok := taskMap[r.TaskID]; ok {
+					fi.TaskTitle = t.Title
+				}
+				// 该用户在此活动的累计打卡次数
+				var cnt int64
+				model.DB.Model(&model.CheckInRecord{}).
+					Where("campaign_id = ? AND user_id = ?", campaign.ID, r.UserID).Count(&cnt)
+				fi.CheckCount = int(cnt)
+
+				// 计算是第几个任务
+				fi.TaskIndex = 0
+				for i, t := range tasks {
+					if t.ID == r.TaskID {
+						fi.TaskIndex = i + 1
+						break
+					}
+				}
+
+				feeds = append(feeds, fi)
+			}
+
+			// 活动状态
+			statusText := "进行中"
+			if now.Before(campaign.StartTime) {
+				statusText = "未开始"
+			} else if now.After(campaign.EndTime) {
+				statusText = "已过期"
+			}
+
+			// 参与人数（去重）
+			var participantCount int64
+			model.DB.Model(&model.CheckInRecord{}).
+				Where("campaign_id = ?", campaign.ID).
+				Distinct("user_id").Count(&participantCount)
+
+			// 当前用户今日是否已打卡
+			userChecked := false
+			if userID != "" {
+				var uc int64
+				model.DB.Model(&model.CheckInRecord{}).
+					Where("campaign_id = ? AND user_id = ? AND check_date = ?", campaign.ID, userID, today).
+					Count(&uc)
+				userChecked = uc > 0
+			}
+
+			c.JSON(200, gin.H{
+				"campaign":          campaign,
+				"status_text":       statusText,
+				"tasks":             taskItems,
+				"feeds":             feeds,
+				"participant_count": participantCount,
+				"user_checked":      userChecked,
+			})
+		})
+
+		// 提交打卡
+		api.POST("/checkin/submit", func(c *gin.Context) {
+			userID := c.PostForm("user_id")
+			campaignIDStr := c.PostForm("campaign_id")
+			taskIDStr := c.PostForm("task_id")
+			content := c.PostForm("content")
+			visibility := c.PostForm("visibility")
+			if visibility == "" {
+				visibility = "all"
+			}
+
+			campaignID, _ := strconv.ParseUint(campaignIDStr, 10, 64)
+			taskID, _ := strconv.ParseUint(taskIDStr, 10, 64)
+
+			if userID == "" || campaignID == 0 || taskID == 0 {
+				c.JSON(400, gin.H{"error": "参数不完整"})
+				return
+			}
+
+			// 检查任务是否存在且在有效期内
+			var task model.CheckInTask
+			if err := model.DB.First(&task, taskID).Error; err != nil {
+				c.JSON(404, gin.H{"error": "任务不存在"})
+				return
+			}
+			now := time.Now()
+			if now.Before(task.StartTime) || now.After(task.EndTime) {
+				c.JSON(400, gin.H{"error": "任务不在有效期内"})
+				return
+			}
+
+			// 检查是否已经打卡过该任务
+			var existCount int64
+			model.DB.Model(&model.CheckInRecord{}).
+				Where("task_id = ? AND user_id = ?", taskID, userID).
+				Count(&existCount)
+			if existCount > 0 {
+				c.JSON(400, gin.H{"error": "您已完成该任务打卡"})
+				return
+			}
+
+			// 处理上传图片（multipart form，多张图片）
+			form, _ := c.MultipartForm()
+			var imageURLs []string
+
+			if form != nil && form.File != nil {
+				photos := form.File["photos"]
+				for _, photo := range photos {
+					fileName := fmt.Sprintf("checkin_%d_%d%s", now.UnixNano(), campaignID, filepath.Ext(photo.Filename))
+					savePath := filepath.Join(UploadDir, "checkin", fileName)
+					os.MkdirAll(filepath.Join(UploadDir, "checkin"), os.ModePerm)
+					if err := c.SaveUploadedFile(photo, savePath); err == nil {
+						imageURLs = append(imageURLs, "/upload/checkin/"+fileName)
+					}
+				}
+			}
+
+			record := model.CheckInRecord{
+				CampaignID: uint(campaignID),
+				TaskID:     uint(taskID),
+				UserID:     userID,
+				Content:    content,
+				Images:     strings.Join(imageURLs, ","),
+				Visibility: visibility,
+				CheckDate:  now.Format("2006-01-02"),
+			}
+			if err := model.DB.Create(&record).Error; err != nil {
+				c.JSON(500, gin.H{"error": "打卡失败: " + err.Error()})
+				return
+			}
+
+			c.JSON(200, gin.H{"status": "success", "record": record})
+		})
+
+		// 打卡排行榜
+		api.GET("/checkin/rank", func(c *gin.Context) {
+			campaignIDStr := c.Query("campaign_id")
+			rankType := c.DefaultQuery("type", "total") // total, week, lastweek, today, yesterday
+			userID := c.Query("user_id")
+
+			campaignID, _ := strconv.ParseUint(campaignIDStr, 10, 64)
+			if campaignID == 0 {
+				c.JSON(400, gin.H{"error": "campaign_id不能为空"})
+				return
+			}
+
+			now := time.Now()
+			var startDate, endDate string
+
+			switch rankType {
+			case "today":
+				startDate = now.Format("2006-01-02")
+				endDate = startDate
+			case "yesterday":
+				yesterday := now.AddDate(0, 0, -1)
+				startDate = yesterday.Format("2006-01-02")
+				endDate = startDate
+			case "week":
+				// 本周：从本周一到今天
+				weekday := int(now.Weekday())
+				if weekday == 0 {
+					weekday = 7
+				}
+				monday := now.AddDate(0, 0, -(weekday - 1))
+				startDate = monday.Format("2006-01-02")
+				endDate = now.Format("2006-01-02")
+			case "lastweek":
+				weekday := int(now.Weekday())
+				if weekday == 0 {
+					weekday = 7
+				}
+				lastMonday := now.AddDate(0, 0, -(weekday-1)-7)
+				lastSunday := lastMonday.AddDate(0, 0, 6)
+				startDate = lastMonday.Format("2006-01-02")
+				endDate = lastSunday.Format("2006-01-02")
+			default: // total
+				startDate = ""
+				endDate = ""
+			}
+
+			type RankRow struct {
+				UserID     string `json:"user_id"`
+				CheckCount int    `json:"check_count"`
+			}
+
+			var rows []RankRow
+			query := model.DB.Model(&model.CheckInRecord{}).
+				Select("user_id, COUNT(*) as check_count").
+				Where("campaign_id = ?", campaignID).
+				Group("user_id").
+				Order("check_count desc").
+				Limit(100)
+
+			if startDate != "" {
+				query = query.Where("check_date >= ? AND check_date <= ?", startDate, endDate)
+			}
+			query.Scan(&rows)
+
+			// 批量获取用户信息
+			userIDs := make([]string, 0, len(rows))
+			for _, r := range rows {
+				userIDs = append(userIDs, r.UserID)
+			}
+			var users []model.User
+			if len(userIDs) > 0 {
+				model.DB.Where("user_id IN ?", userIDs).Find(&users)
+			}
+			userMap := make(map[string]model.User)
+			for _, u := range users {
+				userMap[u.UserID] = u
+			}
+
+			rankList := make([]model.CheckInRankItem, 0, len(rows))
+			myRank := -1
+			myCount := 0
+			for i, r := range rows {
+				item := model.CheckInRankItem{
+					UserID:     r.UserID,
+					CheckCount: r.CheckCount,
+					Rank:       i + 1,
+				}
+				if u, ok := userMap[r.UserID]; ok {
+					item.Nickname = u.Nickname
+					item.AvatarURL = u.AvatarURL
+				}
+				rankList = append(rankList, item)
+				if r.UserID == userID {
+					myRank = i + 1
+					myCount = r.CheckCount
+				}
+			}
+
+			// 总参与人数
+			var participantCount int64
+			model.DB.Model(&model.CheckInRecord{}).
+				Where("campaign_id = ?", campaignID).
+				Distinct("user_id").Count(&participantCount)
+
+			c.JSON(200, gin.H{
+				"rank_list":         rankList,
+				"my_rank":           myRank,
+				"my_count":          myCount,
+				"participant_count": participantCount,
+			})
+		})
+
+		// 我的打卡日记：按月查询（返回该月有打卡的日期列表和详情）
+		api.GET("/checkin/my/diary", func(c *gin.Context) {
+			userID := c.Query("user_id")
+			month := c.Query("month") // 格式：YYYY-MM
+			if userID == "" || month == "" {
+				c.JSON(400, gin.H{"error": "参数不完整"})
+				return
+			}
+
+			// 查询该月所有打卡记录
+			startDate := month + "-01"
+			// 计算月末
+			t, _ := time.Parse("2006-01", month)
+			endDate := t.AddDate(0, 1, -1).Format("2006-01-02")
+
+			var records []model.CheckInRecord
+			model.DB.Where("user_id = ? AND check_date >= ? AND check_date <= ?", userID, startDate, endDate).
+				Order("check_date asc, created_at asc").
+				Find(&records)
+
+			// 获取关联的活动和任务信息
+			campaignIDs := make([]uint, 0)
+			taskIDs := make([]uint, 0)
+			for _, r := range records {
+				campaignIDs = append(campaignIDs, r.CampaignID)
+				taskIDs = append(taskIDs, r.TaskID)
+			}
+
+			var campaigns []model.CheckInCampaign
+			if len(campaignIDs) > 0 {
+				model.DB.Where("id IN ?", campaignIDs).Find(&campaigns)
+			}
+			campaignMap := make(map[uint]model.CheckInCampaign)
+			for _, c2 := range campaigns {
+				campaignMap[c2.ID] = c2
+			}
+
+			var tasks []model.CheckInTask
+			if len(taskIDs) > 0 {
+				model.DB.Where("id IN ?", taskIDs).Find(&tasks)
+			}
+			taskMap := make(map[uint]model.CheckInTask)
+			for _, t := range tasks {
+				taskMap[t.ID] = t
+			}
+
+			type DiaryRecord struct {
+				model.CheckInRecord
+				CampaignTitle string `json:"campaign_title"`
+				CampaignCover string `json:"campaign_cover"`
+				TaskTitle     string `json:"task_title"`
+			}
+
+			// 按日期分组
+			dateMap := make(map[string][]DiaryRecord)
+			checkedDates := make([]string, 0)
+
+			for _, r := range records {
+				dr := DiaryRecord{CheckInRecord: r}
+				if ca, ok := campaignMap[r.CampaignID]; ok {
+					dr.CampaignTitle = ca.Title
+					dr.CampaignCover = ca.CoverImage
+				}
+				if t, ok := taskMap[r.TaskID]; ok {
+					dr.TaskTitle = t.Title
+				}
+				if _, exists := dateMap[r.CheckDate]; !exists {
+					checkedDates = append(checkedDates, r.CheckDate)
+				}
+				dateMap[r.CheckDate] = append(dateMap[r.CheckDate], dr)
+			}
+
+			c.JSON(200, gin.H{
+				"checked_dates": checkedDates,
+				"diary":         dateMap,
+			})
+		})
+
+		// 我的打卡日记：查询某天的打卡详情
+		api.GET("/checkin/my/day", func(c *gin.Context) {
+			userID := c.Query("user_id")
+			date := c.Query("date") // 格式：YYYY-MM-DD
+
+			if userID == "" || date == "" {
+				c.JSON(400, gin.H{"error": "参数不完整"})
+				return
+			}
+
+			var records []model.CheckInRecord
+			model.DB.Where("user_id = ? AND check_date = ?", userID, date).
+				Order("created_at asc").Find(&records)
+
+			// 关联活动和任务信息
+			type DayRecord struct {
+				model.CheckInRecord
+				CampaignTitle string   `json:"campaign_title"`
+				CampaignCover string   `json:"campaign_cover"`
+				TaskTitle     string   `json:"task_title"`
+				ImageList     []string `json:"image_list"`
+			}
+
+			var campaignIDs []uint
+			var taskIDs []uint
+			for _, r := range records {
+				campaignIDs = append(campaignIDs, r.CampaignID)
+				taskIDs = append(taskIDs, r.TaskID)
+			}
+
+			var campaigns []model.CheckInCampaign
+			if len(campaignIDs) > 0 {
+				model.DB.Where("id IN ?", campaignIDs).Find(&campaigns)
+			}
+			cMap := make(map[uint]model.CheckInCampaign)
+			for _, ca := range campaigns {
+				cMap[ca.ID] = ca
+			}
+
+			var tasks []model.CheckInTask
+			if len(taskIDs) > 0 {
+				model.DB.Where("id IN ?", taskIDs).Find(&tasks)
+			}
+			tMap := make(map[uint]model.CheckInTask)
+			for _, t := range tasks {
+				tMap[t.ID] = t
+			}
+
+			result := make([]DayRecord, 0, len(records))
+			for _, r := range records {
+				dr := DayRecord{CheckInRecord: r}
+				if ca, ok := cMap[r.CampaignID]; ok {
+					dr.CampaignTitle = ca.Title
+					dr.CampaignCover = ca.CoverImage
+				}
+				if t, ok := tMap[r.TaskID]; ok {
+					dr.TaskTitle = t.Title
+				}
+				// 解析图片列表
+				if r.Images != "" {
+					dr.ImageList = strings.Split(r.Images, ",")
+				} else {
+					dr.ImageList = []string{}
+				}
+				result = append(result, dr)
+			}
+
+			c.JSON(200, gin.H{"data": result})
+		})
+
+		// 静态文件服务 - 打卡图片
+		api.Static("/checkin-images", filepath.Join(UploadDir, "checkin"))
 	}
 }
