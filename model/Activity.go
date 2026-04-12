@@ -27,16 +27,24 @@ func IncrVisitCount(nanoID string) {
 
 // Activity 活动主表
 type Activity struct {
-	ID         uint      `gorm:"primaryKey;autoIncrement" json:"id"`
-	Location   string    `json:"location"`
-	Lat        float64   `gorm:"type:decimal(10,8)" json:"lat"` // 纬度
-	Lng        float64   `gorm:"type:decimal(11,8)" json:"lng"` // 经度
-	NanoID     string    `json:"nano_id"`                       // 唯一标识符，使用NanoID生成
-	EventDate  string    `json:"event_date"`
-	FilePath   string    `json:"file_path"` // 核心：主表封面图路径
-	VisitCount int       `json:"visit_count"`
-	OpenID     string    `json:"openid"`
-	CreatedAt  time.Time `gorm:"autoCreateTime" json:"created_at"`
+	ID          uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	Category    string    `gorm:"type:varchar(20);default:'photo'" json:"category"` // photo:照片展示活动, checkin:打卡活动
+	Title       string    `gorm:"type:varchar(200)" json:"title"`                   // 活动标题
+	Description string    `gorm:"type:text" json:"description"`                     // 活动描述
+	Location    string    `json:"location"`
+	Lat         float64   `gorm:"type:decimal(10,8)" json:"lat"` // 纬度
+	Lng         float64   `gorm:"type:decimal(11,8)" json:"lng"` // 经度
+	NanoID      string    `json:"nano_id"`                       // 唯一标识符，使用NanoID生成
+	EventDate   string    `json:"event_date"`
+	FilePath    string    `json:"file_path"` // 核心：主表封面图路径
+	CoverImage  string    `gorm:"type:varchar(500)" json:"cover_image"` // 封面图片（用于打卡活动）
+	StartTime   time.Time `json:"start_time"`                           // 活动开始时间
+	EndTime     time.Time `json:"end_time"`                             // 活动结束时间
+	IsActive    bool      `gorm:"default:true" json:"is_active"`        // 是否启用
+	CreatedBy   string    `gorm:"type:varchar(32)" json:"created_by"`   // 创建人(user_id)
+	VisitCount  int       `json:"visit_count"`
+	OpenID      string    `json:"openid"`
+	CreatedAt   time.Time `gorm:"autoCreateTime" json:"created_at"`
 }
 
 // ActivityPhoto 活动照片从表

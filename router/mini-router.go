@@ -374,47 +374,68 @@ func setMiniRouter(router *gin.Engine) {
 			offset := (page - 1) * limit
 
 			now := time.Now()
-			var campaigns []model.CheckInCampaign
+			var activities []model.Activity
 			var total int64
 
-			// model.DB.Model(&model.CheckInCampaign{}).Where("is_active = ?", true).Count(&total)
-			model.DB.Model(&model.CheckInCampaign{}).Count(&total)
-			model.DB.Where("is_active = ?", "true").
+			// 查询打卡活动（Category='checkin'）
+			model.DB.Model(&model.Activity{}).Where("category = ?", "checkin").Count(&total)
+			model.DB.Where("category = ?", "checkin").
+				Where("is_active = ?", true).
 				Order("start_time desc").
 				Limit(limit).Offset(offset).
-				Find(&campaigns)
+				Find(&activities)
 
 			type CampaignItem struct {
-				model.CheckInCampaign
-				StatusText   string `json:"status_text"`
-				TaskCount    int    `json:"task_count"`
-				CheckedCount int    `json:"checked_count"`
-				UserChecked  bool   `json:"user_checked"`
+				ID           uint      `json:"id"`
+				Title        string    `json:"title"`
+				Description  string    `json:"description"`
+				CoverImage   string    `json:"cover_image"`
+				FilePath     string    `json:"file_path"`
+				Category     string    `json:"category"`
+				StartTime    time.Time `json:"start_time"`
+				EndTime      time.Time `json:"end_time"`
+				IsActive     bool      `json:"is_active"`
+				CreatedBy    string    `json:"created_by"`
+				CreatedAt    time.Time `json:"created_at"`
+				StatusText   string    `json:"status_text"`
+				TaskCount    int       `json:"task_count"`
+				CheckedCount int       `json:"checked_count"`
+				UserChecked  bool      `json:"user_checked"`
 			}
 
-			result := make([]CampaignItem, 0, len(campaigns))
-			for _, c2 := range campaigns {
-				item := CampaignItem{CheckInCampaign: c2}
+			result := make([]CampaignItem, 0, len(activities))
+			for _, act := range activities {
+				item := CampaignItem{
+					ID:          act.ID,
+					Title:       act.Title,
+					Description: act.Description,
+					CoverImage:  act.CoverImage,
+					FilePath:    act.FilePath,
+					Category:    act.Category,
+					StartTime:   act.StartTime,
+					EndTime:     act.EndTime,
+					IsActive:    act.IsActive,
+					CreatedBy:   act.CreatedBy,
+					CreatedAt:   act.CreatedAt,
+				}
 
 				// 状态文本
-				if now.Before(c2.StartTime) {
+				if now.Before(act.StartTime) {
 					item.StatusText = "未开始"
-				} else if now.After(c2.EndTime) {
+				} else if now.After(act.EndTime) {
 					item.StatusText = "已过期"
 				} else {
 					item.StatusText = "进行中"
 				}
 
-				// 任务数
-				var tc int64
-				model.DB.Model(&model.CheckInTask{}).Where("campaign_id = ?", c2.ID).Count(&tc)
-				item.TaskCount = int(tc)
+				// 任务数（已废弃 CheckInTask 表，直接设为0）
+				item.TaskCount = 0
 
 				// 今日打卡人数（去重）
 				today := now.Format("2006-01-02")
 				var cc int64
 				model.DB.Model(&model.CheckInRecord{}).
-					Where("campaign_id = ? AND check_date = ?", c2.ID, today).
+					Where("campaign_id = ? AND check_date = ?", act.ID, today).
 					Distinct("user_id").Count(&cc)
 				item.CheckedCount = int(cc)
 
@@ -422,7 +443,7 @@ func setMiniRouter(router *gin.Engine) {
 				if userID != "" {
 					var uc int64
 					model.DB.Model(&model.CheckInRecord{}).
-						Where("campaign_id = ? AND user_id = ? AND check_date = ?", c2.ID, userID, today).
+						Where("campaign_id = ? AND user_id = ? AND check_date = ?", act.ID, userID, today).
 						Count(&uc)
 					item.UserChecked = uc > 0
 				}
@@ -443,8 +464,9 @@ func setMiniRouter(router *gin.Engine) {
 			idStr := c.Query("id")
 			userID := c.Query("user_id")
 
-			var campaign model.CheckInCampaign
-			if err := model.DB.First(&campaign, idStr).Error; err != nil {
+			// var campaign model.CheckInCampaign
+			var activity model.Activity
+			if err := model.DB.First(&activity, idStr).Error; err != nil {
 				c.JSON(404, gin.H{"error": "活动不存在"})
 				return
 			}
@@ -453,9 +475,8 @@ func setMiniRouter(router *gin.Engine) {
 			today := now.Format("2006-01-02")
 
 			// 获取任务列表（含每个任务的打卡人数和当前用户是否已打卡）
+			// 任务列表（已废弃 CheckInTask 表，返回空数组）
 			var tasks []model.CheckInTask
-			model.DB.Where("campaign_id = ?", campaign.ID).Order("start_time asc").Find(&tasks)
-
 			type TaskItem struct {
 				model.CheckInTask
 				CheckedCount int    `json:"checked_count"`
@@ -463,38 +484,7 @@ func setMiniRouter(router *gin.Engine) {
 				StatusText   string `json:"status_text"`
 				IsToday      bool   `json:"is_today"`
 			}
-
-			taskItems := make([]TaskItem, 0, len(tasks))
-			for _, t := range tasks {
-				item := TaskItem{CheckInTask: t}
-
-				// 任务状态
-				if now.Before(t.StartTime) {
-					item.StatusText = "未开始"
-				} else if now.After(t.EndTime) {
-					item.StatusText = "已过期"
-				} else {
-					item.StatusText = "进行中"
-					item.IsToday = true
-				}
-
-				// 打卡人数
-				var cc int64
-				model.DB.Model(&model.CheckInRecord{}).
-					Where("task_id = ?", t.ID).
-					Distinct("user_id").Count(&cc)
-				item.CheckedCount = int(cc)
-
-				// 用户是否已打卡该任务
-				if userID != "" {
-					var uc int64
-					model.DB.Model(&model.CheckInRecord{}).
-						Where("task_id = ? AND user_id = ?", t.ID, userID).Count(&uc)
-					item.UserChecked = uc > 0
-				}
-
-				taskItems = append(taskItems, item)
-			}
+			taskItems := make([]TaskItem, 0)
 
 			// 获取动态（打卡记录，包含用户信息，最新50条）
 			type FeedItem struct {
@@ -507,7 +497,7 @@ func setMiniRouter(router *gin.Engine) {
 			}
 
 			var records []model.CheckInRecord
-			model.DB.Where("campaign_id = ?", campaign.ID).
+			model.DB.Where("campaign_id = ?", activity.ID).
 				Order("created_at desc").Limit(50).Find(&records)
 
 			// 批量拉取用户信息
@@ -537,39 +527,31 @@ func setMiniRouter(router *gin.Engine) {
 					fi.Nickname = u.Nickname
 					fi.AvatarURL = u.AvatarURL
 				}
-				if t, ok := taskMap[r.TaskID]; ok {
-					fi.TaskTitle = t.Title
-				}
+				fi.TaskTitle = "每日打卡"
 				// 该用户在此活动的累计打卡次数
 				var cnt int64
 				model.DB.Model(&model.CheckInRecord{}).
-					Where("campaign_id = ? AND user_id = ?", campaign.ID, r.UserID).Count(&cnt)
+					Where("campaign_id = ? AND user_id = ?", activity.ID, r.UserID).Count(&cnt)
 				fi.CheckCount = int(cnt)
 
-				// 计算是第几个任务
-				fi.TaskIndex = 0
-				for i, t := range tasks {
-					if t.ID == r.TaskID {
-						fi.TaskIndex = i + 1
-						break
-					}
-				}
+				// 任务索引（已废弃 CheckInTask 表，默认设为1）
+				fi.TaskIndex = 1
 
 				feeds = append(feeds, fi)
 			}
 
 			// 活动状态
 			statusText := "进行中"
-			if now.Before(campaign.StartTime) {
+			if now.Before(activity.StartTime) {
 				statusText = "未开始"
-			} else if now.After(campaign.EndTime) {
+			} else if now.After(activity.EndTime) {
 				statusText = "已过期"
 			}
 
 			// 参与人数（去重）
 			var participantCount int64
 			model.DB.Model(&model.CheckInRecord{}).
-				Where("campaign_id = ?", campaign.ID).
+				Where("campaign_id = ?", activity.ID).
 				Distinct("user_id").Count(&participantCount)
 
 			// 当前用户今日是否已打卡
@@ -577,13 +559,13 @@ func setMiniRouter(router *gin.Engine) {
 			if userID != "" {
 				var uc int64
 				model.DB.Model(&model.CheckInRecord{}).
-					Where("campaign_id = ? AND user_id = ? AND check_date = ?", campaign.ID, userID, today).
+					Where("campaign_id = ? AND user_id = ? AND check_date = ?", activity.ID, userID, today).
 					Count(&uc)
 				userChecked = uc > 0
 			}
 
 			c.JSON(200, gin.H{
-				"campaign":          campaign,
+				"campaign":          activity,
 				"status_text":       statusText,
 				"tasks":             taskItems,
 				"feeds":             feeds,
@@ -606,30 +588,30 @@ func setMiniRouter(router *gin.Engine) {
 			campaignID, _ := strconv.ParseUint(campaignIDStr, 10, 64)
 			taskID, _ := strconv.ParseUint(taskIDStr, 10, 64)
 
-			if userID == "" || campaignID == 0 || taskID == 0 {
+			if userID == "" || campaignID == 0 {
 				c.JSON(400, gin.H{"error": "参数不完整"})
 				return
 			}
 
-			// 检查任务是否存在且在有效期内
-			var task model.CheckInTask
-			if err := model.DB.First(&task, taskID).Error; err != nil {
-				c.JSON(404, gin.H{"error": "任务不存在"})
+			// 检查活动是否存在且在进行中（已废弃 CheckInTask 表）
+			var activity model.Activity
+			if err := model.DB.First(&activity, campaignID).Error; err != nil || activity.Category != "checkin" {
+				c.JSON(404, gin.H{"error": "活动不存在"})
 				return
 			}
 			now := time.Now()
-			if now.Before(task.StartTime) || now.After(task.EndTime) {
-				c.JSON(400, gin.H{"error": "任务不在有效期内"})
+			if now.Before(activity.StartTime) || now.After(activity.EndTime) {
+				c.JSON(400, gin.H{"error": "活动不在有效期内"})
 				return
 			}
 
-			// 检查是否已经打卡过该任务
+			// 检查用户是否已经为该活动今日打卡（任意任务）
 			var existCount int64
 			model.DB.Model(&model.CheckInRecord{}).
-				Where("task_id = ? AND user_id = ?", taskID, userID).
+				Where("campaign_id = ? AND user_id = ? AND check_date = ?", campaignID, userID, now.Format("2006-01-02")).
 				Count(&existCount)
 			if existCount > 0 {
-				c.JSON(400, gin.H{"error": "您已完成该任务打卡"})
+				c.JSON(400, gin.H{"error": "您今日已打卡，请勿重复提交"})
 				return
 			}
 
