@@ -1,6 +1,7 @@
 package router
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"go-file/middleware"
@@ -614,7 +615,7 @@ func setMiniRouter(router *gin.Engine) {
 				return
 			}
 
-			/* 检查用户是否已经为该活动今日打卡（任意任务）
+			// 检查用户是否已经为该活动今日打卡（任意任务）
 			var existCount int64
 			model.DB.Model(&model.CheckInRecord{}).
 				Where("campaign_id = ? AND user_id = ? AND check_date = ?", campaignID, userID, now.Format("2006-01-02")).
@@ -622,12 +623,38 @@ func setMiniRouter(router *gin.Engine) {
 			if existCount > 0 {
 				c.JSON(400, gin.H{"error": "您今日已打卡，请勿重复提交"})
 				return
-			}*/
+			}
 
-			// 处理上传图片（multipart form，多张图片）
-			form, _ := c.MultipartForm()
+			// 处理上传图片（支持 base64 和 multipart form）
 			var imageURLs []string
 
+			// 1. 处理 base64 图片（photos_base64 字段为 JSON 数组）
+			photosBase64Str := c.PostForm("photos_base64")
+			if photosBase64Str != "" {
+				var base64Images []string
+				if err := json.Unmarshal([]byte(photosBase64Str), &base64Images); err == nil {
+					for idx, imgBase64 := range base64Images {
+						// 移除 data URL 前缀（如果存在）
+						if idx := strings.Index(imgBase64, "base64,"); idx != -1 {
+							imgBase64 = imgBase64[idx+7:]
+						}
+						// 解码 base64
+						imgData, err := base64.StdEncoding.DecodeString(imgBase64)
+						if err != nil {
+							continue
+						}
+						fileName := fmt.Sprintf("checkin_%d_%d_%d.jpg", now.UnixNano(), campaignID, idx)
+						savePath := filepath.Join(UploadDir, "checkin", fileName)
+						os.MkdirAll(filepath.Join(UploadDir, "checkin"), os.ModePerm)
+						if err := os.WriteFile(savePath, imgData, 0644); err == nil {
+							imageURLs = append(imageURLs, "/upload/checkin/"+fileName)
+						}
+					}
+				}
+			}
+
+			// 2. 处理 multipart form 文件上传（兼容旧方式）
+			form, _ := c.MultipartForm()
 			if form != nil && form.File != nil {
 				photos := form.File["photos"]
 				for _, photo := range photos {
