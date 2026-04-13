@@ -18,17 +18,6 @@ type CheckInCampaign struct {
 	UpdatedAt   time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 }
 
-// CheckInTask 打卡任务（每个活动下的每日任务）
-type CheckInTask struct {
-	ID         uint      `gorm:"primaryKey;autoIncrement" json:"id"`
-	CampaignID uint      `gorm:"index;not null" json:"campaign_id"`       // 所属活动ID
-	Title      string    `gorm:"type:varchar(200);not null" json:"title"` // 任务标题
-	StartTime  time.Time `json:"start_time"`                              // 任务开始时间
-	EndTime    time.Time `json:"end_time"`                                // 任务结束时间
-	SortOrder  int       `gorm:"default:0" json:"sort_order"`             // 排序
-	CreatedAt  time.Time `gorm:"autoCreateTime" json:"created_at"`
-}
-
 // CheckInRecord 用户打卡记录
 type CheckInRecord struct {
 	ID         uint      `gorm:"primaryKey;autoIncrement" json:"id"`

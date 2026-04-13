@@ -385,6 +385,9 @@ func setMiniRouter(router *gin.Engine) {
 				Limit(limit).Offset(offset).
 				Find(&activities)
 
+			// 文件在返回给api时,文件路径需要明确域名
+			activities[0].FilePath = "http://127.0.0.1:3000" + activities[0].FilePath
+
 			type CampaignItem struct {
 				ID           uint      `json:"id"`
 				Title        string    `json:"title"`
@@ -471,14 +474,15 @@ func setMiniRouter(router *gin.Engine) {
 				return
 			}
 
+			// 文件在返回给api时,文件路径需要明确域名
+			activity.FilePath = "http://127.0.0.1:3000" + activity.FilePath
+
 			now := time.Now()
 			today := now.Format("2006-01-02")
 
 			// 获取任务列表（含每个任务的打卡人数和当前用户是否已打卡）
 			// 任务列表（已废弃 CheckInTask 表，返回空数组）
-			var tasks []model.CheckInTask
 			type TaskItem struct {
-				model.CheckInTask
 				CheckedCount int    `json:"checked_count"`
 				UserChecked  bool   `json:"user_checked"`
 				StatusText   string `json:"status_text"`
@@ -514,12 +518,6 @@ func setMiniRouter(router *gin.Engine) {
 				userMap[u.UserID] = u
 			}
 
-			// 任务标题Map
-			taskMap := make(map[uint]model.CheckInTask)
-			for _, t := range tasks {
-				taskMap[t.ID] = t
-			}
-
 			feeds := make([]FeedItem, 0, len(records))
 			for _, r := range records {
 				fi := FeedItem{CheckInRecord: r}
@@ -536,6 +534,17 @@ func setMiniRouter(router *gin.Engine) {
 
 				// 任务索引（已废弃 CheckInTask 表，默认设为1）
 				fi.TaskIndex = 1
+
+				// 处理图片路径，添加域名前缀
+				if r.Images != "" {
+					paths := strings.Split(r.Images, ",")
+					for i, p := range paths {
+						paths[i] = "http://127.0.0.1:3000" + p
+					}
+					fi.Images = strings.Join(paths, ",")
+				} else {
+					fi.Images = ""
+				}
 
 				feeds = append(feeds, fi)
 			}
@@ -605,7 +614,7 @@ func setMiniRouter(router *gin.Engine) {
 				return
 			}
 
-			// 检查用户是否已经为该活动今日打卡（任意任务）
+			/* 检查用户是否已经为该活动今日打卡（任意任务）
 			var existCount int64
 			model.DB.Model(&model.CheckInRecord{}).
 				Where("campaign_id = ? AND user_id = ? AND check_date = ?", campaignID, userID, now.Format("2006-01-02")).
@@ -613,7 +622,7 @@ func setMiniRouter(router *gin.Engine) {
 			if existCount > 0 {
 				c.JSON(400, gin.H{"error": "您今日已打卡，请勿重复提交"})
 				return
-			}
+			}*/
 
 			// 处理上传图片（multipart form，多张图片）
 			form, _ := c.MultipartForm()
@@ -797,15 +806,6 @@ func setMiniRouter(router *gin.Engine) {
 				campaignMap[c2.ID] = c2
 			}
 
-			var tasks []model.CheckInTask
-			if len(taskIDs) > 0 {
-				model.DB.Where("id IN ?", taskIDs).Find(&tasks)
-			}
-			taskMap := make(map[uint]model.CheckInTask)
-			for _, t := range tasks {
-				taskMap[t.ID] = t
-			}
-
 			type DiaryRecord struct {
 				model.CheckInRecord
 				CampaignTitle string `json:"campaign_title"`
@@ -823,9 +823,7 @@ func setMiniRouter(router *gin.Engine) {
 					dr.CampaignTitle = ca.Title
 					dr.CampaignCover = ca.CoverImage
 				}
-				if t, ok := taskMap[r.TaskID]; ok {
-					dr.TaskTitle = t.Title
-				}
+
 				if _, exists := dateMap[r.CheckDate]; !exists {
 					checkedDates = append(checkedDates, r.CheckDate)
 				}
@@ -877,24 +875,12 @@ func setMiniRouter(router *gin.Engine) {
 				cMap[ca.ID] = ca
 			}
 
-			var tasks []model.CheckInTask
-			if len(taskIDs) > 0 {
-				model.DB.Where("id IN ?", taskIDs).Find(&tasks)
-			}
-			tMap := make(map[uint]model.CheckInTask)
-			for _, t := range tasks {
-				tMap[t.ID] = t
-			}
-
 			result := make([]DayRecord, 0, len(records))
 			for _, r := range records {
 				dr := DayRecord{CheckInRecord: r}
 				if ca, ok := cMap[r.CampaignID]; ok {
 					dr.CampaignTitle = ca.Title
 					dr.CampaignCover = ca.CoverImage
-				}
-				if t, ok := tMap[r.TaskID]; ok {
-					dr.TaskTitle = t.Title
 				}
 				// 解析图片列表
 				if r.Images != "" {
