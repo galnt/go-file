@@ -835,9 +835,11 @@ func setMiniRouter(router *gin.Engine) {
 
 			type DiaryRecord struct {
 				model.CheckInRecord
-				CampaignTitle string `json:"campaign_title"`
-				CampaignCover string `json:"campaign_cover"`
-				TaskTitle     string `json:"task_title"`
+				// 显式声明 Images 覆盖嵌入的 string 类型，改为数组供前端遍历
+				Images         []string `json:"images"`
+				CampaignTitle  string   `json:"campaign_title"`
+				CampaignCover string   `json:"campaign_cover"`
+				TaskTitle     string   `json:"task_title"`
 			}
 
 			// 按日期分组
@@ -848,7 +850,20 @@ func setMiniRouter(router *gin.Engine) {
 				dr := DiaryRecord{CheckInRecord: r}
 				if ca, ok := campaignMap[r.CampaignID]; ok {
 					dr.CampaignTitle = ca.Title
-					dr.CampaignCover = ca.CoverImage
+					// 活动封面图：添加域名前缀
+					if ca.CoverImage != "" {
+						dr.CampaignCover = "http://127.0.0.1:3000" + ca.CoverImage
+					}
+				}
+
+				// 打卡图片：拆分成数组，添加域名前缀
+				if r.Images != "" {
+					paths := strings.Split(r.Images, ",")
+					images := make([]string, len(paths))
+					for i, p := range paths {
+						images[i] = "http://127.0.0.1:3000" + p
+					}
+					dr.Images = images
 				}
 
 				if _, exists := dateMap[r.CheckDate]; !exists {
@@ -909,12 +924,23 @@ func setMiniRouter(router *gin.Engine) {
 					dr.CampaignTitle = ca.Title
 					dr.CampaignCover = ca.CoverImage
 				}
-				// 解析图片列表
+
+				/* 解析图片列表
 				if r.Images != "" {
 					dr.ImageList = strings.Split(r.Images, ",")
 				} else {
 					dr.ImageList = []string{}
+				}*/
+
+				// 打卡图片：添加域名前缀
+				if r.Images != "" {
+					paths := strings.Split(r.Images, ",")
+					for i, p := range paths {
+						paths[i] = "http://127.0.0.1:3000" + p
+					}
+					dr.Images = strings.Join(paths, ",")
 				}
+
 				result = append(result, dr)
 			}
 
