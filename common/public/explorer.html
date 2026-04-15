@@ -881,27 +881,26 @@
                                 }
                                 
                                 // 更新用户信息显示
-                                if (window.userInfo === undefined) {
-                                    window.userInfo = {};
-                                }
-                                window.userInfo = {
+                                userInfo = {
                                     nickname: data.nickname || '',
                                     avatar: data.avatar_url || '',
                                     openid: data.openid || data.user_id || ''
                                 };
                                 
                                 // 调用现有的更新UI函数
-                                if (typeof updateUserInfo === 'function') {
-                                    updateUserInfo();
+                                updateUserInfo();
+                                
+                                // 显示浏览历史区域
+                                const browseHistorySection = document.getElementById('browse-history-section');
+                                if (browseHistorySection) {
+                                    browseHistorySection.style.display = 'block';
                                 }
                                 
                                 alert('登录成功！');
                                 // 隐藏面板
                                 hideMyPanel();
                                 // 记录浏览历史
-                                if (typeof recordBrowseHistory === 'function') {
-                                    recordBrowseHistory();
-                                }
+                                recordBrowseHistory();
                             } else {
                                 alert('登录失败：' + (data.message || '未知错误'));
                                 loginBtn.textContent = '登录';
@@ -922,6 +921,14 @@
                     updateLoginButtonState();
                 });
                 </script>
+            </div>
+            
+            <!-- 浏览历史展示 -->
+            <div id="browse-history-section" style="display: none; margin-top: 20px;">
+                <h4 style="margin-bottom: 10px;">浏览记录</h4>
+                <div id="browse-history-list" class="history-list">
+                    <!-- 动态加载 -->
+                </div>
             </div>
         </div>
     </div>
@@ -1199,6 +1206,8 @@
                         updateUserInfo();
                         // 记录浏览历史
                         recordBrowseHistory();
+                        // 加载并显示浏览历史
+                        loadBrowseHistory();
                     }
                 })
                 .catch(error => {
@@ -1579,10 +1588,15 @@
             }
         }
 
+
+
         // 加载浏览历史
         async function loadBrowseHistory() {
             try {
-                const token = localStorage.getItem('userToken');
+                let token = localStorage.getItem('userToken');
+                if (!token) {
+                    token = localStorage.getItem('user_token');
+                }
                 const userId = localStorage.getItem('userId');
                 
                 if (!token || !userId) {
@@ -1614,6 +1628,12 @@
 
         // 显示浏览历史
         function displayBrowseHistory(history) {
+            // 显示浏览历史区域
+            const browseHistorySection = document.getElementById('browse-history-section');
+            if (browseHistorySection) {
+                browseHistorySection.style.display = 'block';
+            }
+            
             const historyList = document.getElementById('browse-history-list');
             if (!historyList) return;
             
