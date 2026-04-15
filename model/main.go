@@ -59,6 +59,8 @@ func InitDB() (*gorm.DB, error) {
 	DB.AutoMigrate(&Activity{}, &ActivityPhoto{}, &BrowseHistory{})
 	DB.AutoMigrate(&CheckInCampaign{}, &CheckInRecord{})
 
+	DB.AutoMigrate(&SmsCode{})
+
 	createAdminAccount()
 	return DB, nil
 }

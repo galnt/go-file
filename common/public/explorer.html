@@ -609,51 +609,319 @@
                 </button>
                 <p class="login-tip">登录后可以保存您的下载记录</p>
                 
-                <!-- 帐号密码登录/注册 -->
-                <div class="account-login-section">
-                    <p style="margin: 20px 0 10px; text-align: center; font-size: 14px; color: #666;">或使用帐号密码登录</p>
-                    
-                    <!-- 登录表单 -->
-                    <form id="account-login-form" class="account-form">
-                        <div class="form-group">
-                            <input type="text" id="login-username" placeholder="用户名或邮箱" required>
+                <!-- 手机号验证码登录 -->
+                <div class="phone-login-section">
+                    <p style="margin: 20px 0 10px; text-align: center; font-size: 14px; color: #666;">使用手机号验证码登录</p>
+                    <!-- 手机号登录表单 -->
+                    <form id="phone-login-form" class="phone-form">
+                        <input type="tel" id="phone-number" name="phone" placeholder="请输入手机号" required pattern="^1[3-9]\d{9}$" title="请输入有效的11位中国大陆手机号">
+                        
+                        <!-- 滑动验证码区域 -->
+                        <div id="captcha-container" style="margin: 15px 0; padding: 10px; border: 1px solid #e0e0e0; border-radius: 5px; background-color: #f9f9f9;">
+                            <p style="margin: 0 0 10px 0; font-size: 13px; color: #555;">请滑动滑块完成验证</p>
+                            <div style="position: relative; height: 40px; background: #f0f0f0; border-radius: 20px; overflow: hidden;">
+                                <div id="captcha-slider" style="position: absolute; left: 0; top: 0; width: 40px; height: 40px; background: #007bff; border-radius: 50%; cursor: pointer; z-index: 2; display: flex; align-items: center; justify-content: center; color: white; user-select: none;">
+                                    →
+                                </div>
+                                <div id="captcha-track" style="position: absolute; left: 0; top: 0; width: 0; height: 100%; background: #4CAF50; border-radius: 20px; transition: width 0.1s;"></div>
+                                <div style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #888; font-size: 13px; z-index: 1;">
+                                    滑动到最右侧完成验证
+                                </div>
+                            </div>
+                            <input type="hidden" id="captcha-verified" name="captcha_verified" value="false">
                         </div>
-                        <div class="form-group">
-                            <input type="password" id="login-password" placeholder="密码" required>
+
+                        <!-- 短信验证码区域 -->
+                        <div style="display: flex; gap: 10px; margin: 15px 0;">
+                            <input type="text" id="sms-code" name="sms_code" placeholder="请输入短信验证码" required maxlength="6" pattern="\d{6}" title="6位数字验证码" style="flex: 1;">
+                            <button type="button" id="send-sms-btn" style="padding: 0 15px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; color: #666; cursor: not-allowed;" disabled>获取验证码</button>
                         </div>
-                        <button type="submit" class="account-login-btn">登录</button>
-                        <p class="form-switch">还没有账号？<a href="#" onclick="showRegisterForm()">立即注册</a></p>
+
+                        <button type="submit" id="login-btn" style="width: 100%; padding: 12px; background: #f0f0f0; border: none; border-radius: 4px; color: #999; cursor: not-allowed;" disabled>登录</button>
                     </form>
-                    
-                    <!-- 注册表单 -->
-                    <form id="account-register-form" class="account-form" style="display: none;">
-                        <div class="form-group">
-                            <input type="text" id="register-username" placeholder="用户名" required>
-                        </div>
-                        <div class="form-group">
-                            <input type="email" id="register-email" placeholder="邮箱（可选）">
-                        </div>
-                        <div class="form-group">
-                            <input type="password" id="register-password" placeholder="密码" required>
-                        </div>
-                        <div class="form-group">
-                            <input type="password" id="register-confirm-password" placeholder="确认密码" required>
-                        </div>
-                        <div class="form-group">
-                            <input type="text" id="register-display-name" placeholder="显示名称（可选）">
-                        </div>
-                        <button type="submit" class="account-register-btn">注册</button>
-                        <p class="form-switch">已有账号？<a href="#" onclick="showLoginForm()">立即登录</a></p>
-                    </form>
-                    
-                    <!-- 浏览历史展示 -->
-                    <div id="browse-history-section" style="display: none; margin-top: 20px;">
-                        <h4 style="margin-bottom: 10px;">浏览记录</h4>
-                        <div id="browse-history-list" class="history-list">
-                            <!-- 动态加载 -->
-                        </div>
-                    </div>
                 </div>
+
+                <script>
+                // 滑动验证码逻辑
+                document.addEventListener('DOMContentLoaded', function() {
+                    const slider = document.getElementById('captcha-slider');
+                    const track = document.getElementById('captcha-track');
+                    const captchaVerified = document.getElementById('captcha-verified');
+                    const sendSmsBtn = document.getElementById('send-sms-btn');
+                    const phoneInput = document.getElementById('phone-number');
+                    const smsCodeInput = document.getElementById('sms-code');
+                    const loginBtn = document.getElementById('login-btn');
+                    
+                    let isDragging = false;
+                    let startX = 0;
+                    let sliderLeft = 0;
+                    const containerWidth = slider.parentElement.offsetWidth;
+                    const sliderWidth = slider.offsetWidth;
+                    const maxLeft = containerWidth - sliderWidth;
+                    
+                    // 更新登录按钮状态
+                    function updateLoginButtonState() {
+                        const isCaptchaValid = captchaVerified.value === 'true';
+                        const isPhoneValid = phoneInput.checkValidity();
+                        const isSmsCodeValid = smsCodeInput.value.length === 6 && /^\d{6}$/.test(smsCodeInput.value);
+                        
+                        if (isCaptchaValid && isPhoneValid && isSmsCodeValid) {
+                            loginBtn.disabled = false;
+                            loginBtn.style.background = '#007bff';
+                            loginBtn.style.color = 'white';
+                            loginBtn.style.cursor = 'pointer';
+                        } else {
+                            loginBtn.disabled = true;
+                            loginBtn.style.background = '#f0f0f0';
+                            loginBtn.style.color = '#999';
+                            loginBtn.style.cursor = 'not-allowed';
+                        }
+                    }
+                    
+                    slider.addEventListener('mousedown', startDrag);
+                    slider.addEventListener('touchstart', startDrag);
+                    
+                    function startDrag(e) {
+                        isDragging = true;
+                        startX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+                        sliderLeft = slider.offsetLeft;
+                        document.addEventListener('mousemove', onDrag);
+                        document.addEventListener('touchmove', onDrag);
+                        document.addEventListener('mouseup', stopDrag);
+                        document.addEventListener('touchend', stopDrag);
+                    }
+                    
+                    function onDrag(e) {
+                        if (!isDragging) return;
+                        e.preventDefault();
+                        const currentX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+                        let newLeft = sliderLeft + (currentX - startX);
+                        newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+                        slider.style.left = newLeft + 'px';
+                        track.style.width = newLeft + 'px';
+                        
+                        // 验证成功判断（滑动到最右侧90%以上）
+                        if (newLeft >= maxLeft * 0.9) {
+                            captchaVerified.value = 'true';
+                            slider.style.background = '#4CAF50';
+                            slider.textContent = '✓';
+                            
+                            // 启用发送短信按钮（如果手机号有效）
+                            if (phoneInput.checkValidity()) {
+                                sendSmsBtn.disabled = false;
+                                sendSmsBtn.style.background = '#007bff';
+                                sendSmsBtn.style.color = 'white';
+                                sendSmsBtn.style.cursor = 'pointer';
+                            }
+                        } else {
+                            captchaVerified.value = 'false';
+                            slider.style.background = '#007bff';
+                            slider.textContent = '→';
+                            sendSmsBtn.disabled = true;
+                            sendSmsBtn.style.background = '#f0f0f0';
+                            sendSmsBtn.style.color = '#666';
+                            sendSmsBtn.style.cursor = 'not-allowed';
+                        }
+                        
+                        // 更新登录按钮状态
+                        updateLoginButtonState();
+                    }
+                    
+                    function stopDrag() {
+                        isDragging = false;
+                        document.removeEventListener('mousemove', onDrag);
+                        document.removeEventListener('touchmove', onDrag);
+                        document.removeEventListener('mouseup', stopDrag);
+                        document.removeEventListener('touchend', stopDrag);
+                    }
+                    
+                    // 手机号输入验证
+                    phoneInput.addEventListener('input', function() {
+                        if (captchaVerified.value === 'true' && phoneInput.checkValidity()) {
+                            sendSmsBtn.disabled = false;
+                            sendSmsBtn.style.background = '#007bff';
+                            sendSmsBtn.style.color = 'white';
+                            sendSmsBtn.style.cursor = 'pointer';
+                        } else {
+                            sendSmsBtn.disabled = true;
+                            sendSmsBtn.style.background = '#f0f0f0';
+                            sendSmsBtn.style.color = '#666';
+                            sendSmsBtn.style.cursor = 'not-allowed';
+                        }
+                        // 更新登录按钮状态
+                        updateLoginButtonState();
+                    });
+                    
+                    // 发送短信验证码
+                    sendSmsBtn.addEventListener('click', function() {
+                        if (sendSmsBtn.disabled) return;
+                        
+                        const phone = phoneInput.value;
+                        if (!/^1[3-9]\d{9}$/.test(phone)) {
+                            alert('请输入有效的手机号');
+                            return;
+                        }
+                        
+                        // 禁用按钮，开始倒计时
+                        let countdown = 60;
+                        sendSmsBtn.disabled = true;
+                        sendSmsBtn.textContent = `${countdown}秒后重发`;
+                        sendSmsBtn.style.background = '#ccc';
+                        
+                        const timer = setInterval(() => {
+                            countdown--;
+                            sendSmsBtn.textContent = `${countdown}秒后重发`;
+                            if (countdown <= 0) {
+                                clearInterval(timer);
+                                sendSmsBtn.disabled = false;
+                                sendSmsBtn.textContent = '获取验证码';
+                                sendSmsBtn.style.background = '#007bff';
+                                sendSmsBtn.style.color = 'white';
+                                sendSmsBtn.style.cursor = 'pointer';
+                            }
+                        }, 1000);
+                        
+                        // 调用后端API发送短信验证码（有效期10分钟）
+                        fetch('/api/send-sms', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ 
+                                phone: phone,
+                                captcha_verified: captchaVerified.value
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // 发送成功
+                                alert('验证码已发送到 ' + phone + '，有效期10分钟');
+                                smsCodeInput.focus();
+                            } else {
+                                // 发送失败，恢复按钮
+                                clearInterval(timer);
+                                sendSmsBtn.disabled = false;
+                                sendSmsBtn.textContent = '获取验证码';
+                                sendSmsBtn.style.background = '#007bff';
+                                sendSmsBtn.style.color = 'white';
+                                sendSmsBtn.style.cursor = 'pointer';
+                                alert('发送失败：' + (data.message || '未知错误'));
+                            }
+                        })
+                        .catch(error => {
+                            console.error('发送短信验证码失败:', error);
+                            // 恢复按钮
+                            clearInterval(timer);
+                            sendSmsBtn.disabled = false;
+                            sendSmsBtn.textContent = '获取验证码';
+                            sendSmsBtn.style.background = '#007bff';
+                            sendSmsBtn.style.color = 'white';
+                            sendSmsBtn.style.cursor = 'pointer';
+                            alert('网络错误，请重试');
+                        });
+                    });
+                    
+                    // 验证码输入验证
+                    smsCodeInput.addEventListener('input', function() {
+                        // 更新登录按钮状态
+                        updateLoginButtonState();
+                    });
+                    
+                    // 表单提交
+                    document.getElementById('phone-login-form').addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        
+                        const phone = phoneInput.value;
+                        const smsCode = smsCodeInput.value;
+                        const captcha = captchaVerified.value;
+                        
+                        if (captcha !== 'true') {
+                            alert('请先完成滑动验证');
+                            return;
+                        }
+                        
+                        if (!/^1[3-9]\d{9}$/.test(phone)) {
+                            alert('请输入有效的手机号');
+                            return;
+                        }
+                        
+                        if (!/^\d{6}$/.test(smsCode)) {
+                            alert('请输入6位数字验证码');
+                            return;
+                        }
+                        
+                        // 调用后端API验证短信验证码并登录
+                        loginBtn.textContent = '登录中...';
+                        loginBtn.disabled = true;
+                        
+                        fetch('/api/phone-login', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ 
+                                phone: phone, 
+                                sms_code: smsCode
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // 登录成功
+                                // 保存token（与现有登录逻辑一致）
+                                if (data.token) {
+                                    localStorage.setItem('user_token', data.token);
+                                }
+                                if (data.user_id) {
+                                    localStorage.setItem('userId', data.user_id);
+                                }
+                                if (data.nickname) {
+                                    localStorage.setItem('username', data.nickname);
+                                }
+                                
+                                // 更新用户信息显示
+                                if (window.userInfo === undefined) {
+                                    window.userInfo = {};
+                                }
+                                window.userInfo = {
+                                    nickname: data.nickname || '',
+                                    avatar: data.avatar_url || '',
+                                    openid: data.openid || data.user_id || ''
+                                };
+                                
+                                // 调用现有的更新UI函数
+                                if (typeof updateUserInfo === 'function') {
+                                    updateUserInfo();
+                                }
+                                
+                                alert('登录成功！');
+                                // 隐藏面板
+                                hideMyPanel();
+                                // 记录浏览历史
+                                if (typeof recordBrowseHistory === 'function') {
+                                    recordBrowseHistory();
+                                }
+                            } else {
+                                alert('登录失败：' + (data.message || '未知错误'));
+                                loginBtn.textContent = '登录';
+                                loginBtn.disabled = false;
+                                updateLoginButtonState();
+                            }
+                        })
+                        .catch(error => {
+                            console.error('登录请求失败:', error);
+                            alert('网络错误，请重试');
+                            loginBtn.textContent = '登录';
+                            loginBtn.disabled = false;
+                            updateLoginButtonState();
+                        });
+                    });
+                    
+                    // 初始化登录按钮状态
+                    updateLoginButtonState();
+                });
+                </script>
             </div>
         </div>
     </div>

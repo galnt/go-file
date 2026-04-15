@@ -19,9 +19,16 @@ func setWebRouter(router *gin.Engine) {
 	router.GET("/login", middleware.ExtractUserInfo(), controller.GetLoginPage)
 	router.POST("/login", middleware.CriticalRateLimit(), controller.Login)
 	router.GET("/logout", controller.Logout)
-	router.GET("/register", middleware.ExtractUserInfo(), controller.GetRegisterPage)
-	router.POST("/register", middleware.CriticalRateLimit(), controller.Register)
+	// 注册功能已禁用，改用手机号登录
+	// router.GET("/register", middleware.ExtractUserInfo(), controller.GetRegisterPage)
+	// router.POST("/register", middleware.CriticalRateLimit(), controller.Register)
 	router.GET("/help", middleware.ExtractUserInfo(), controller.GetHelpPage)
+
+	// 验证码相关
+	router.GET("/api/captcha/generate", controller.GenerateCaptcha)
+	router.POST("/api/captcha/verify", controller.VerifyCaptcha)
+	router.POST("/api/send-sms", controller.SendSmsCode)
+	router.POST("/api/phone-login", controller.PhoneLogin)
 
 	// Download files
 	fileDownloadAuth := router.Group("/")
